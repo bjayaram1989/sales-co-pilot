@@ -1,5 +1,5 @@
 import { randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
-import postgres from 'postgres';
+import postgres, { type Sql } from 'postgres';
 
 export interface AuthUser {
   id: string;
@@ -9,22 +9,33 @@ export interface AuthUser {
   image: string | null;
 }
 
-const connectionString = process.env.AUTH_DB_URL;
-
-if (!connectionString) {
-  throw new Error('Missing AUTH_DB_URL environment variable.');
-}
-
-const sql = postgres(connectionString, {
-  ssl: connectionString.includes('localhost') ? 'prefer' : 'require',
-});
-
+let sqlClient: Sql | null = null;
 let initialized = false;
+
+function getSqlClient(): Sql {
+  if (sqlClient) {
+    return sqlClient;
+  }
+
+  const connectionString = process.env.AUTH_DB_URL;
+
+  if (!connectionString) {
+    throw new Error('Missing AUTH_DB_URL environment variable.');
+  }
+
+  sqlClient = postgres(connectionString, {
+    ssl: connectionString.includes('localhost') ? 'prefer' : 'require',
+  });
+
+  return sqlClient;
+}
 
 async function ensureUsersTable() {
   if (initialized) {
     return;
   }
+
+  const sql = getSqlClient();
 
   await sql`
     CREATE TABLE IF NOT EXISTS users (
@@ -80,6 +91,8 @@ function verifyPassword(password: string, storedHash: string): boolean {
 export async function getUserByEmail(email: string): Promise<AuthUser | null> {
   await ensureUsersTable();
 
+  const sql = getSqlClient();
+
   const [row] = await sql<Record<string, unknown>[]>`
     SELECT id, email, name, password_hash, image
     FROM users
@@ -98,6 +111,8 @@ export async function createUserWithPassword(params: { email: string; password: 
   const name = params.name?.trim() || null;
   const id = randomUUID();
   const passwordHash = hashPassword(params.password);
+
+  const sql = getSqlClient();
 
   const [row] = await sql<Record<string, unknown>[]>`
     INSERT INTO users (id, email, name, password_hash, image, created_at, updated_at)
@@ -121,6 +136,8 @@ export async function upsertGoogleUser(params: { email: string; name?: string; i
   const name = params.name?.trim() || null;
   const image = params.image?.trim() || null;
   const id = randomUUID();
+
+  const sql = getSqlClient();
 
   const [row] = await sql<Record<string, unknown>[]>`
     INSERT INTO users (id, email, name, password_hash, image, created_at, updated_at)
