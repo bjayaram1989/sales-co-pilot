@@ -28,13 +28,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      authorize(credentials) {
+      async authorize(credentials) {
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) {
           return null;
         }
 
-        const user = verifyUserCredentials(parsed.data.email, parsed.data.password);
+        const user = await verifyUserCredentials(parsed.data.email, parsed.data.password);
         if (!user) {
           return null;
         }
@@ -52,7 +52,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ account, profile, user }) {
       if (account?.provider === 'google' && user.email) {
-        const dbUser = upsertGoogleUser({
+        const dbUser = await upsertGoogleUser({
           email: user.email,
           name: toOptionalString(user.name) ?? toOptionalString(typeof profile?.name === 'string' ? profile.name : undefined),
           image: toOptionalString(user.image) ?? toOptionalString(typeof profile?.image === 'string' ? profile.image : undefined),

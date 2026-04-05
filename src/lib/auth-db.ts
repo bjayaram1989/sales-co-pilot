@@ -1,7 +1,5 @@
 import { randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import Database from 'better-sqlite3';
+import postgres from 'postgres';
 
 export interface AuthUser {
   id: string;
@@ -11,24 +9,37 @@ export interface AuthUser {
   image: string | null;
 }
 
-const defaultDbPath = resolve(process.cwd(), '.data/auth.db');
-const dbPath = process.env.AUTH_DB_PATH ? resolve(process.env.AUTH_DB_PATH) : defaultDbPath;
+const connectionString = process.env.AUTH_DB_URL;
 
-mkdirSync(dirname(dbPath), { recursive: true });
+if (!connectionString) {
+  throw new Error('Missing AUTH_DB_URL environment variable.');
+}
 
-const db = new Database(dbPath);
+const sql = postgres(connectionString, {
+  ssl: connectionString.includes('localhost') ? 'prefer' : 'require',
+});
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    name TEXT,
-    password_hash TEXT,
-    image TEXT,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )
-`);
+let initialized = false;
+
+async function ensureUsersTable() {
+  if (initialized) {
+    return;
+  }
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      password_hash TEXT,
+      image TEXT,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `;
+
+  initialized = true;
+}
 
 function mapUser(row: Record<string, unknown> | undefined): AuthUser | null {
   if (!row) {
@@ -66,69 +77,72 @@ function verifyPassword(password: string, storedHash: string): boolean {
   return timingSafeEqual(passwordBuffer, hashBuffer);
 }
 
-export function getUserByEmail(email: string): AuthUser | null {
-  const stmt = db.prepare('SELECT id, email, name, password_hash, image FROM users WHERE email = ? LIMIT 1');
-  return mapUser(stmt.get(email.trim().toLowerCase()) as Record<string, unknown> | undefined);
+export async function getUserByEmail(email: string): Promise<AuthUser | null> {
+  await ensureUsersTable();
+
+  const [row] = await sql<Record<string, unknown>[]>`
+    SELECT id, email, name, password_hash, image
+    FROM users
+    WHERE email = ${email.trim().toLowerCase()}
+    LIMIT 1
+  `;
+
+  return mapUser(row);
 }
 
-export function createUserWithPassword(params: { email: string; password: string; name?: string }): AuthUser {
+export async function createUserWithPassword(params: { email: string; password: string; name?: string }): Promise<AuthUser> {
+  await ensureUsersTable();
+
   const now = new Date().toISOString();
   const email = params.email.trim().toLowerCase();
   const name = params.name?.trim() || null;
   const id = randomUUID();
   const passwordHash = hashPassword(params.password);
 
-  const stmt = db.prepare(`
+  const [row] = await sql<Record<string, unknown>[]>`
     INSERT INTO users (id, email, name, password_hash, image, created_at, updated_at)
-    VALUES (?, ?, ?, ?, NULL, ?, ?)
-  `);
+    VALUES (${id}, ${email}, ${name}, ${passwordHash}, NULL, ${now}, ${now})
+    RETURNING id, email, name, password_hash, image
+  `;
 
-  stmt.run(id, email, name, passwordHash, now, now);
+  const user = mapUser(row);
+  if (!user) {
+    throw new Error('Failed to create user record.');
+  }
 
-  return {
-    id,
-    email,
-    name,
-    passwordHash,
-    image: null,
-  };
+  return user;
 }
 
-export function upsertGoogleUser(params: { email: string; name?: string; image?: string }): AuthUser {
+export async function upsertGoogleUser(params: { email: string; name?: string; image?: string }): Promise<AuthUser> {
+  await ensureUsersTable();
+
   const now = new Date().toISOString();
   const email = params.email.trim().toLowerCase();
   const name = params.name?.trim() || null;
   const image = params.image?.trim() || null;
-
-  const existing = getUserByEmail(email);
-
-  if (existing) {
-    db.prepare('UPDATE users SET name = ?, image = ?, updated_at = ? WHERE id = ?').run(name, image, now, existing.id);
-    return {
-      ...existing,
-      name,
-      image,
-    };
-  }
-
   const id = randomUUID();
 
-  db.prepare(`
+  const [row] = await sql<Record<string, unknown>[]>`
     INSERT INTO users (id, email, name, password_hash, image, created_at, updated_at)
-    VALUES (?, ?, ?, NULL, ?, ?, ?)
-  `).run(id, email, name, image, now, now);
+    VALUES (${id}, ${email}, ${name}, NULL, ${image}, ${now}, ${now})
+    ON CONFLICT (email)
+    DO UPDATE SET
+      name = EXCLUDED.name,
+      image = EXCLUDED.image,
+      updated_at = EXCLUDED.updated_at
+    RETURNING id, email, name, password_hash, image
+  `;
 
-  return {
-    id,
-    email,
-    name,
-    passwordHash: null,
-    image,
-  };
+  const user = mapUser(row);
+  if (!user) {
+    throw new Error('Failed to upsert Google user.');
+  }
+
+  return user;
 }
 
-export function verifyUserCredentials(email: string, password: string): AuthUser | null {
-  const user = getUserByEmail(email);
+export async function verifyUserCredentials(email: string, password: string): Promise<AuthUser | null> {
+  const user = await getUserByEmail(email);
   if (!user?.passwordHash) {
     return null;
   }

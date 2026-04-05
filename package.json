@@ -23,7 +23,7 @@
     "uuid": "^13.0.0",
     "next-auth": "^5.0.0-beta.29",
     "zod": "^4.3.6",
-    "better-sqlite3": "^11.8.1"
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

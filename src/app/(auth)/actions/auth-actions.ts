@@ -55,11 +55,11 @@ export async function signUpWithCredentials(_: AuthFormState | undefined, formDa
     return { error: 'Password must be at least 8 characters.' };
   }
 
-  if (getUserByEmail(email)) {
+  if (await getUserByEmail(email)) {
     return { error: 'An account already exists for that email.' };
   }
 
-  createUserWithPassword({ name, email, password });
+  await createUserWithPassword({ name, email, password });
 
   await signIn('credentials', {
     email,
