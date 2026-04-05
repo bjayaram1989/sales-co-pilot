@@ -1,7 +1,7 @@
 import { randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 
 export interface AuthUser {
   id: string;
@@ -16,7 +16,7 @@ const dbPath = process.env.AUTH_DB_PATH ? resolve(process.env.AUTH_DB_PATH) : de
 
 mkdirSync(dirname(dbPath), { recursive: true });
 
-const db = new DatabaseSync(dbPath);
+const db = new Database(dbPath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
