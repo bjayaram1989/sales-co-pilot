@@ -9,6 +9,11 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
+
+function toOptionalString(value: string | null | undefined): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
@@ -49,8 +54,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (account?.provider === 'google' && user.email) {
         const dbUser = upsertGoogleUser({
           email: user.email,
-          name: user.name ?? profile?.name,
-          image: user.image ?? (typeof profile?.image === 'string' ? profile.image : undefined),
+          name: toOptionalString(user.name) ?? toOptionalString(typeof profile?.name === 'string' ? profile.name : undefined),
+          image: toOptionalString(user.image) ?? toOptionalString(typeof profile?.image === 'string' ? profile.image : undefined),
         });
 
         user.id = dbUser.id;
