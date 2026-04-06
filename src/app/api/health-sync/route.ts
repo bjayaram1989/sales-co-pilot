@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getToken } from 'next-auth/jwt';
 
-// In-memory store for server-side (in production, use a real database)
-// For now, the API route accepts health data and returns it
-// The client will poll or the Shortcut will push data
+async function requireToken(request: NextRequest) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.AUTH_SECRET,
+    cookieName:
+      process.env.NODE_ENV === 'production'
+        ? '__Secure-authjs.session-token'
+        : 'authjs.session-token',
+  });
+
+  if (!token?.id) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+
+  return { userId: token.id as string };
+}
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  const authResult = await requireToken(request);
+  if ('error' in authResult) return authResult.error;
 
   try {
     const body = await request.json();
@@ -26,7 +34,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate data types
     const healthData = {
       date: String(date),
       steps: Number(steps) || 0,
@@ -34,7 +41,7 @@ export async function POST(request: NextRequest) {
       restingHeartRate: restingHeartRate ? Number(restingHeartRate) : undefined,
       weight: weight ? Number(weight) : undefined,
       receivedAt: new Date().toISOString(),
-      userId: session.user.id,
+      userId: authResult.userId,
     };
 
     console.log('Health sync received:', healthData);
@@ -52,17 +59,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+export async function GET(request: NextRequest) {
+  const authResult = await requireToken(request);
+  if ('error' in authResult) return authResult.error;
 
   return NextResponse.json({
     status: 'Apple Health Sync API is active',
     usage: 'POST with { apiKey, date, steps, activeCalories, restingHeartRate?, weight? }',
+    userId: authResult.userId,
   });
 }

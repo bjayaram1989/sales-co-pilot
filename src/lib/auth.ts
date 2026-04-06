@@ -9,7 +9,21 @@ import { normalizeIdentifier } from '@/lib/security';
 const hasGoogleCredentials =
   !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+type TokenWithUser = { id?: string; username?: string | null };
+type SessionWithUser = {
+  user?: { id?: string; username?: string } | null;
+};
+
+type HandlerFn = (...args: unknown[]) => unknown;
+type HandlerSet = { GET: HandlerFn; POST: HandlerFn };
+
+function hasHandlers(value: unknown): value is { handlers: HandlerSet } {
+  if (!value || typeof value !== 'object') return false;
+  const maybe = value as { handlers?: Partial<HandlerSet> };
+  return !!maybe.handlers?.GET && !!maybe.handlers?.POST;
+}
+
+const authConfig = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: 'jwt' },
   pages: {
@@ -65,21 +79,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: TokenWithUser; user?: { id?: string; username?: string | null } }) {
       if (user) {
         token.id = user.id;
         token.username = user.username;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: SessionWithUser; token: TokenWithUser }) {
       if (session.user && token.id) {
-        session.user.id = token.id as string;
-        session.user.username = token.username as string | undefined;
+        session.user.id = token.id;
+        session.user.username = token.username ?? undefined;
       }
       return session;
     },
   },
-});
+};
+
+const nextAuthFactory = NextAuth as unknown as (config: typeof authConfig) => unknown;
+const nextAuthResult = nextAuthFactory(authConfig);
+
+export const handlers: HandlerSet = hasHandlers(nextAuthResult)
+  ? nextAuthResult.handlers
+  : {
+      GET: nextAuthResult as HandlerFn,
+      POST: nextAuthResult as HandlerFn,
+    };
 
 export const googleEnabled = hasGoogleCredentials;
