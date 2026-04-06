@@ -5,6 +5,9 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
+const hasGoogleCredentials =
+  !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: 'jwt' },
@@ -12,10 +15,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: '/login',
   },
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
+    // Only include Google if credentials are configured
+    ...(hasGoogleCredentials
+      ? [
+          Google({
+            clientId: process.env.AUTH_GOOGLE_ID!,
+            clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+          }),
+        ]
+      : []),
     Credentials({
       name: 'credentials',
       credentials: {
@@ -28,21 +36,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.hashedPassword) return null;
 
-        if (!user || !user.hashedPassword) return null;
+          const isValid = await bcrypt.compare(password, user.hashedPassword);
+          if (!isValid) return null;
 
-        const isValid = await bcrypt.compare(password, user.hashedPassword);
-        if (!isValid) return null;
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          };
+        } catch {
+          return null;
+        }
       },
     }),
   ],
@@ -61,3 +70,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const googleEnabled = hasGoogleCredentials;
