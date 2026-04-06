@@ -19,14 +19,16 @@ const GOAL_ADJUSTMENTS = {
 };
 
 const PROTEIN_PER_KG = 2.2; // g/kg for muscle preservation during cut
+const LBS_TO_KG = 0.453592;
 const FAT_CALORIE_PERCENT = 0.25; // 25% of calories from fat
 const CALORIES_PER_G_PROTEIN = 4;
 const CALORIES_PER_G_CARB = 4;
 const CALORIES_PER_G_FAT = 9;
 
 export function calculateBMR(profile: UserProfile): number {
-  // Mifflin-St Jeor equation
-  const base = 10 * profile.currentWeightKg + 6.25 * profile.heightCm - 5 * profile.age;
+  // Mifflin-St Jeor equation (needs kg internally)
+  const weightKg = profile.currentWeightLbs * LBS_TO_KG;
+  const base = 10 * weightKg + 6.25 * profile.heightCm - 5 * profile.age;
   return profile.gender === 'male' ? base + 5 : base - 161;
 }
 
@@ -40,8 +42,9 @@ export function calculateMacroTargets(profile: UserProfile): MacroTargets {
   const goalAdjustment = GOAL_ADJUSTMENTS[profile.goal];
   const targetCalories = Math.round(tdee * (1 + goalAdjustment));
 
-  // Protein: 2.2g/kg bodyweight
-  const protein = Math.round(PROTEIN_PER_KG * profile.currentWeightKg);
+  // Protein: 2.2g/kg bodyweight (convert lbs to kg)
+  const weightKg = profile.currentWeightLbs * LBS_TO_KG;
+  const protein = Math.round(PROTEIN_PER_KG * weightKg);
 
   // Fat: 25% of total calories
   const fat = Math.round((targetCalories * FAT_CALORIE_PERCENT) / CALORIES_PER_G_FAT);
@@ -82,7 +85,7 @@ export function calculateAdaptiveAdjustment(
 
   // Sort by date
   const sorted = [...weightEntries].sort((a, b) => a.date.localeCompare(b.date));
-  const weights = sorted.map(w => w.weightKg);
+  const weights = sorted.map(w => w.weightLbs);
 
   // Calculate 7-day moving averages
   const currentWeekAvg = movingAverage(weights, 7);
@@ -90,36 +93,36 @@ export function calculateAdaptiveAdjustment(
   const weeklyChange = currentWeekAvg - previousWeekAvg;
 
   if (goal === 'fat_loss') {
-    // Target: 0.5-0.7% body weight per week (approx 0.4-0.7kg for most)
-    if (weeklyChange > -0.2) {
+    // Target: 0.5-0.7% body weight per week (approx 1-1.5 lbs for most)
+    if (weeklyChange > -0.5) {
       // Weight not dropping fast enough or stalled
       const twoWeekChange = weights.length >= 21
         ? movingAverage(weights, 7) - movingAverage(weights.slice(0, -14), 7)
         : weeklyChange * 2;
 
-      if (Math.abs(twoWeekChange) < 0.3) {
+      if (Math.abs(twoWeekChange) < 0.7) {
         // Stalled for 2+ weeks
         return {
           newCalories: currentCalories - 200,
           adjustment: -200,
-          reason: `Weight stalled for 2+ weeks (${weeklyChange > 0 ? '+' : ''}${weeklyChange.toFixed(2)}kg/wk). Reducing by 200 calories.`,
+          reason: `Weight stalled for 2+ weeks (${weeklyChange > 0 ? '+' : ''}${weeklyChange.toFixed(1)} lbs/wk). Reducing by 200 calories.`,
           shouldAdjust: true,
         };
       }
       return {
         newCalories: currentCalories - 100,
         adjustment: -100,
-        reason: `Weight loss too slow (${weeklyChange.toFixed(2)}kg/wk). Reducing by 100 calories.`,
+        reason: `Weight loss too slow (${weeklyChange.toFixed(1)} lbs/wk). Reducing by 100 calories.`,
         shouldAdjust: true,
       };
     }
 
-    if (weeklyChange < -1.0) {
+    if (weeklyChange < -2.2) {
       // Losing too fast - risk of muscle loss
       return {
         newCalories: currentCalories + 150,
         adjustment: 150,
-        reason: `Weight dropping too fast (${weeklyChange.toFixed(2)}kg/wk). Increasing by 150 calories to preserve muscle.`,
+        reason: `Weight dropping too fast (${weeklyChange.toFixed(1)} lbs/wk). Increasing by 150 calories to preserve muscle.`,
         shouldAdjust: true,
       };
     }
@@ -128,25 +131,25 @@ export function calculateAdaptiveAdjustment(
     return {
       newCalories: currentCalories,
       adjustment: 0,
-      reason: `On track! Losing ${Math.abs(weeklyChange).toFixed(2)}kg/week (target: 0.3-0.7kg/wk).`,
+      reason: `On track! Losing ${Math.abs(weeklyChange).toFixed(1)} lbs/week (target: 0.7-1.5 lbs/wk).`,
       shouldAdjust: false,
     };
   }
 
   if (goal === 'muscle_gain') {
-    if (weeklyChange < 0.1) {
+    if (weeklyChange < 0.2) {
       return {
         newCalories: currentCalories + 150,
         adjustment: 150,
-        reason: `Not gaining enough (${weeklyChange.toFixed(2)}kg/wk). Increasing by 150 calories.`,
+        reason: `Not gaining enough (${weeklyChange.toFixed(1)} lbs/wk). Increasing by 150 calories.`,
         shouldAdjust: true,
       };
     }
-    if (weeklyChange > 0.5) {
+    if (weeklyChange > 1.1) {
       return {
         newCalories: currentCalories - 100,
         adjustment: -100,
-        reason: `Gaining too fast (${weeklyChange.toFixed(2)}kg/wk). Reducing by 100 to minimize fat gain.`,
+        reason: `Gaining too fast (${weeklyChange.toFixed(1)} lbs/wk). Reducing by 100 to minimize fat gain.`,
         shouldAdjust: true,
       };
     }

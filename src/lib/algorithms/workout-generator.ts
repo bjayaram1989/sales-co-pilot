@@ -107,30 +107,30 @@ function getLastWeight(exerciseId: string, sessions: WorkoutSession[]): number {
 }
 
 function estimateStartingWeight(exerciseId: string, experience: string, gender: string): number {
-  // Base weights for a beginner male (in kg)
+  // Base weights for a beginner male (in lbs)
   const baseWeights: Record<string, number> = {
-    'bench-press': 40, 'incline-bench': 35, 'db-bench-press': 14, 'incline-db-press': 12,
-    'ohp': 25, 'db-shoulder-press': 10, 'arnold-press': 8,
-    'squat': 40, 'front-squat': 30, 'goblet-squat': 12,
-    'deadlift': 50, 'rdl': 40, 'db-rdl': 14,
-    'barbell-row': 35, 'db-row': 14, 'pull-up': 0,
-    'barbell-curl': 15, 'db-curl': 8, 'hammer-curl': 8,
-    'tricep-pushdown': 15, 'overhead-extension': 10, 'skull-crusher': 15,
-    'leg-press': 60, 'leg-curl': 20, 'leg-extension': 20,
-    'hip-thrust': 40, 'standing-calf-raise': 30, 'seated-calf-raise': 20,
-    'lateral-raise': 5, 'front-raise': 5, 'reverse-fly': 5, 'face-pull': 10,
-    'cable-crossover': 10, 'cable-curl': 10, 'cable-row': 25, 'lat-pulldown': 30,
-    'close-grip-bench': 30, 'rope-pushdown': 12, 'cable-kickback': 5,
-    'pec-deck': 20, 'machine-chest-press': 25, 'machine-shoulder-press': 20,
-    'machine-row': 25, 'straight-arm-pulldown': 15,
-    'bulgarian-split': 10, 'lunge': 10, 'hack-squat': 40,
-    'cable-pull-through': 15, 'cable-kickback-glute': 8, 'step-up': 8,
-    'seated-leg-curl': 20, 'good-morning': 20, 'incline-curl': 6,
-    'preacher-curl': 12, 'concentration-curl': 6, 'cable-lateral-raise': 5,
-    'upright-row': 20, 't-bar-row': 25,
+    'bench-press': 95, 'incline-bench': 75, 'db-bench-press': 30, 'incline-db-press': 25,
+    'ohp': 55, 'db-shoulder-press': 20, 'arnold-press': 15,
+    'squat': 95, 'front-squat': 65, 'goblet-squat': 25,
+    'deadlift': 115, 'rdl': 85, 'db-rdl': 30,
+    'barbell-row': 75, 'db-row': 30, 'pull-up': 0,
+    'barbell-curl': 35, 'db-curl': 15, 'hammer-curl': 15,
+    'tricep-pushdown': 30, 'overhead-extension': 20, 'skull-crusher': 35,
+    'leg-press': 135, 'leg-curl': 45, 'leg-extension': 45,
+    'hip-thrust': 95, 'standing-calf-raise': 65, 'seated-calf-raise': 45,
+    'lateral-raise': 10, 'front-raise': 10, 'reverse-fly': 10, 'face-pull': 20,
+    'cable-crossover': 20, 'cable-curl': 20, 'cable-row': 55, 'lat-pulldown': 65,
+    'close-grip-bench': 65, 'rope-pushdown': 25, 'cable-kickback': 10,
+    'pec-deck': 45, 'machine-chest-press': 55, 'machine-shoulder-press': 45,
+    'machine-row': 55, 'straight-arm-pulldown': 30,
+    'bulgarian-split': 20, 'lunge': 20, 'hack-squat': 90,
+    'cable-pull-through': 30, 'cable-kickback-glute': 15, 'step-up': 15,
+    'seated-leg-curl': 45, 'good-morning': 45, 'incline-curl': 12,
+    'preacher-curl': 25, 'concentration-curl': 12, 'cable-lateral-raise': 10,
+    'upright-row': 45, 't-bar-row': 55,
   };
 
-  let weight = baseWeights[exerciseId] ?? 10;
+  let weight = baseWeights[exerciseId] ?? 20;
 
   // Adjust for experience
   if (experience === 'intermediate') weight *= 1.5;
@@ -139,7 +139,7 @@ function estimateStartingWeight(exerciseId: string, experience: string, gender: 
   // Adjust for gender
   if (gender === 'female') weight *= 0.6;
 
-  return Math.round(weight * 2) / 2; // Round to nearest 0.5
+  return Math.round(weight / 5) * 5; // Round to nearest 5 lbs
 }
 
 export function getWorkoutSplitDescription(split: string): string {

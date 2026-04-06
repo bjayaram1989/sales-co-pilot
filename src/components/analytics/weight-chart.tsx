@@ -15,11 +15,11 @@ export function WeightChart({ entries, targetWeight }: WeightChartProps) {
   const data = sorted.map((entry, i) => {
     // Calculate 7-day moving average
     const window = sorted.slice(Math.max(0, i - 6), i + 1);
-    const avg = window.reduce((sum, e) => sum + e.weightKg, 0) / window.length;
+    const avg = window.reduce((sum, e) => sum + e.weightLbs, 0) / window.length;
 
     return {
       date: formatDateShort(entry.date),
-      weight: entry.weightKg,
+      weight: entry.weightLbs,
       trend: Math.round(avg * 10) / 10,
     };
   });
@@ -47,7 +47,7 @@ export function WeightChart({ entries, targetWeight }: WeightChartProps) {
             tickLine={false}
             axisLine={false}
             width={40}
-            tickFormatter={(v) => `${v}kg`}
+            tickFormatter={(v) => `${v}`}
           />
           <Tooltip
             contentStyle={{
@@ -63,7 +63,7 @@ export function WeightChart({ entries, targetWeight }: WeightChartProps) {
             stroke="var(--chart-1)"
             strokeWidth={2}
             dot={{ r: 3, fill: 'var(--chart-1)' }}
-            name="Weight (kg)"
+            name="Weight (lbs)"
           />
           <Line
             type="monotone"

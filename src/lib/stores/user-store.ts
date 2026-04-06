@@ -17,11 +17,11 @@ export async function saveUserProfile(profile: Omit<UserProfile, 'id' | 'created
   return db.userProfiles.add({ ...profile, createdAt: now, updatedAt: now } as UserProfile) as Promise<number>;
 }
 
-export async function updateUserWeight(weightKg: number): Promise<void> {
+export async function updateUserWeight(weightLbs: number): Promise<void> {
   const profile = await getUserProfile();
   if (profile?.id) {
     await db.userProfiles.update(profile.id, {
-      currentWeightKg: weightKg,
+      currentWeightLbs: weightLbs,
       updatedAt: new Date().toISOString(),
     });
   }

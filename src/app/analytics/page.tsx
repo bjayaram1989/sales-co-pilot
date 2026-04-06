@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
     setWeights(w);
     setActivities(a);
     setWorkouts(s);
-    if (profile) setTargetWeight(profile.targetWeightKg);
+    if (profile) setTargetWeight(profile.targetWeightLbs);
   };
 
   const handleAddWeight = async () => {
@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
     if (isNaN(value) || value <= 0) return;
     await addWeightEntry({
       date: toDateString(),
-      weightKg: value,
+      weightLbs: value,
     });
     setNewWeight('');
     setShowWeightInput(false);
@@ -66,7 +66,7 @@ export default function AnalyticsPage() {
   });
 
   const latestWeight = weights.length > 0
-    ? [...weights].sort((a, b) => b.date.localeCompare(a.date))[0].weightKg
+    ? [...weights].sort((a, b) => b.date.localeCompare(a.date))[0].weightLbs
     : null;
 
   const tabs = [
@@ -98,8 +98,8 @@ export default function AnalyticsPage() {
               type="number"
               value={newWeight}
               onChange={(e) => setNewWeight(e.target.value)}
-              placeholder="Weight in kg"
-              step="0.1"
+              placeholder="Weight in lbs"
+              step="1"
               className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
               autoFocus
             />
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-3 gap-3">
           <StatCard
             label="Weight"
-            value={latestWeight ? `${latestWeight}kg` : '--'}
+            value={latestWeight ? `${latestWeight} lbs` : '--'}
             icon={Scale}
           />
           <StatCard

@@ -6,8 +6,8 @@ interface ProgressionResult {
   isPR: boolean;
 }
 
-const COMPOUND_INCREMENT = 2.5; // kg
-const ISOLATION_INCREMENT = 1.25; // kg
+const COMPOUND_INCREMENT = 5; // lbs
+const ISOLATION_INCREMENT = 2.5; // lbs
 const DELOAD_WEIGHT_REDUCTION = 0.2; // 20%
 const DELOAD_VOLUME_REDUCTION = 0.4; // 40%
 const FAILURE_WEIGHT_REDUCTION = 0.1; // 10%
@@ -54,7 +54,7 @@ export function calculateProgression(
     const newWeight = currentWeight + increment;
     return {
       newWeight,
-      reason: `Hit all target reps for ${CONSECUTIVE_SUCCESS_THRESHOLD} sessions. Increasing by ${increment}kg.`,
+      reason: `Hit all target reps for ${CONSECUTIVE_SUCCESS_THRESHOLD} sessions. Increasing by ${increment} lbs.`,
       isPR: true,
     };
   }
@@ -77,7 +77,7 @@ export function shouldDeload(weekNumber: number): boolean {
 
 export function applyDeload(weight: number, sets: number): { weight: number; sets: number } {
   return {
-    weight: Math.round(weight * (1 - DELOAD_WEIGHT_REDUCTION) * 2) / 2,
+    weight: Math.round(weight * (1 - DELOAD_WEIGHT_REDUCTION) / 5) * 5,
     sets: Math.max(2, Math.round(sets * (1 - DELOAD_VOLUME_REDUCTION))),
   };
 }

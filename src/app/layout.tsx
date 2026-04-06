@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { ThemeProvider } from '@/components/layout/theme-provider';
-import { BottomNav } from '@/components/layout/bottom-nav';
+import { SessionProvider } from '@/components/layout/session-provider';
+import { AppShell } from '@/components/layout/app-shell';
 import './globals.css';
 
 const geistSans = localFont({
@@ -46,10 +47,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-background text-foreground">
-        <ThemeProvider>
-          <main className="pb-nav">{children}</main>
-          <BottomNav />
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>
+            <AppShell>{children}</AppShell>
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

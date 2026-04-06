@@ -62,7 +62,7 @@ export default function DashboardPage() {
 
         if (weights.length > 0) {
           const sorted = [...weights].sort((a, b) => b.date.localeCompare(a.date));
-          setLatestWeight(sorted[0].weightKg);
+          setLatestWeight(sorted[0].weightLbs);
 
           const adj = calculateAdaptiveAdjustment(macros.calories, weights, p.goal);
           if (adj.shouldAdjust) {
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           />
           <StatCard
             label="Weight"
-            value={latestWeight ? `${latestWeight}kg` : '--'}
+            value={latestWeight ? `${latestWeight} lbs` : '--'}
             icon={Scale}
           />
           <StatCard

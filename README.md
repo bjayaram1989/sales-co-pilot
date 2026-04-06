@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FitTrack Pro
+
+Expert workout planner, smart nutrition tracker, and analytics dashboard. Built with Next.js, TypeScript, and Tailwind CSS.
+
+## Features
+
+- **Workout Planner** - AI-generated workout plans with progressive overload, deload weeks, and PR tracking. Supports PPL, Upper/Lower, Full Body, and Bro Split templates.
+- **Nutrition Tracker** - Daily food logging with macro tracking (calories, protein, carbs, fat). Adaptive calorie adjustments based on weight trends.
+- **Analytics Dashboard** - Weight trend charts, strength progression, daily step tracking, and activity analysis.
+- **Apple Health Sync** - Integrates with iOS Shortcuts to sync steps, active calories, and heart rate data.
+- **Supplement Guide** - Evidence-based supplement recommendations tailored to your fitness goals.
+- **Authentication** - Email/password and Google sign-in via Auth.js.
+- **Dark Mode** - Full dark/light/system theme support.
+- **Mobile-First** - Responsive design with floating navigation and swipe gestures.
+
+## Tech Stack
+
+- **Next.js 16** with App Router and TypeScript
+- **Tailwind CSS v4** for styling
+- **Dexie.js** (IndexedDB) for client-side data persistence
+- **Recharts** for charts and visualizations
+- **Auth.js v5** with Prisma adapter for authentication
+- **Prisma v7** with SQLite for the user/auth database
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- npm, yarn, pnpm, or bun
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone <repo-url>
+cd sales-co-pilot
+
+# Install dependencies
+npm install
+
+# Copy environment variables
+cp .env.example .env
+
+# Generate a secure AUTH_SECRET
+openssl rand -base64 32
+# Paste the output into .env as AUTH_SECRET
+
+# Generate Prisma client and create database
+npx prisma generate
+npx prisma db push
+
+# Start the dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to use the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Google OAuth Setup (Optional)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new OAuth 2.0 Client ID
+3. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
+4. Copy the Client ID and Client Secret into `.env`
 
-## Learn More
+## Deploying to Vercel
 
-To learn more about Next.js, take a look at the following resources:
+1. Push the repo to GitHub
+2. Import the project in [Vercel](https://vercel.com/new)
+3. Add environment variables in the Vercel dashboard:
+   - `AUTH_SECRET` - generate with `openssl rand -base64 32`
+   - `AUTH_TRUST_HOST` - set to `true`
+   - `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` (if using Google sign-in)
+   - `DATABASE_URL` - for production, use a PostgreSQL connection string (e.g., Vercel Postgres, Neon, or Supabase)
+4. Update the Google OAuth redirect URI to `https://your-domain.vercel.app/api/auth/callback/google`
+5. Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> **Note:** For production, switch the Prisma datasource from SQLite to PostgreSQL by updating `prisma/schema.prisma` and your `DATABASE_URL`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+src/
+  app/                    # Next.js App Router pages
+    page.tsx              # Dashboard
+    workouts/             # Workout planner pages
+    nutrition/            # Nutrition tracker pages
+    analytics/            # Analytics dashboard
+    settings/             # User settings & Apple Health sync
+    login/                # Authentication page
+    api/                  # API routes (auth, registration, health sync)
+  components/             # React components
+    layout/               # Navigation, header, shell
+    workouts/             # Workout-related components
+    nutrition/            # Nutrition-related components
+    analytics/            # Charts and analytics components
+    shared/               # Reusable components
+  lib/
+    algorithms/           # Progressive overload, macro calculator, etc.
+    data/                 # Exercise database, food database, supplements
+    stores/               # Dexie CRUD operations
+    db.ts                 # Dexie database schema
+    auth.ts               # Auth.js configuration
+    prisma.ts             # Prisma client
+  types/                  # TypeScript interfaces
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Units
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Body weight & lifting weights:** lbs (pounds)
+- **Nutrition:** grams (g) for macros, kcal for calories
+- **Height:** cm

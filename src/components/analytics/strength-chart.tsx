@@ -83,7 +83,7 @@ export function StrengthChart({ sessions }: StrengthChartProps) {
               tickLine={false}
               axisLine={false}
               width={40}
-              tickFormatter={(v) => `${v}kg`}
+              tickFormatter={(v) => `${v}`}
             />
             <Tooltip
               contentStyle={{
@@ -94,8 +94,8 @@ export function StrengthChart({ sessions }: StrengthChartProps) {
               }}
               formatter={(value, name) => {
                 const v = Number(value);
-                if (name === 'e1rm') return [`${v.toFixed(1)}kg`, 'Est. 1RM'];
-                if (name === 'weight') return [`${v}kg`, 'Weight'];
+                if (name === 'e1rm') return [`${v.toFixed(1)} lbs`, 'Est. 1RM'];
+                if (name === 'weight') return [`${v} lbs`, 'Weight'];
                 return [String(v), String(name)];
               }}
             />

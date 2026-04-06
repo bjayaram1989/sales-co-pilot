@@ -5,8 +5,8 @@ export interface UserProfile {
   age: number;
   gender: 'male' | 'female';
   heightCm: number;
-  currentWeightKg: number;
-  targetWeightKg: number;
+  currentWeightLbs: number;
+  targetWeightLbs: number;
   activityLevel: ActivityLevel;
   goal: Goal;
   experienceLevel: ExperienceLevel;
@@ -151,7 +151,7 @@ export interface Supplement {
 export interface WeightEntry {
   id?: number;
   date: string;
-  weightKg: number;
+  weightLbs: number;
   bodyFatPercent?: number;
   note?: string;
 }

@@ -46,8 +46,8 @@ export default function SettingsPage() {
     age: 25,
     gender: 'male' as 'male' | 'female',
     heightCm: 175,
-    currentWeightKg: 80,
-    targetWeightKg: 75,
+    currentWeightLbs: 175,
+    targetWeightLbs: 165,
     activityLevel: 'moderate' as ActivityLevel,
     goal: 'fat_loss' as Goal,
     experienceLevel: 'intermediate' as ExperienceLevel,
@@ -63,8 +63,8 @@ export default function SettingsPage() {
           age: profile.age,
           gender: profile.gender,
           heightCm: profile.heightCm,
-          currentWeightKg: profile.currentWeightKg,
-          targetWeightKg: profile.targetWeightKg,
+          currentWeightLbs: profile.currentWeightLbs,
+          targetWeightLbs: profile.targetWeightLbs,
           activityLevel: profile.activityLevel,
           goal: profile.goal,
           experienceLevel: profile.experienceLevel,
@@ -173,22 +173,22 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-muted-foreground">Weight (kg)</label>
+                <label className="mb-1 block text-sm text-muted-foreground">Weight (lbs)</label>
                 <input
                   type="number"
-                  value={form.currentWeightKg}
-                  onChange={(e) => updateField('currentWeightKg', Number(e.target.value))}
-                  step="0.1"
+                  value={form.currentWeightLbs}
+                  onChange={(e) => updateField('currentWeightLbs', Number(e.target.value))}
+                  step="1"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm text-muted-foreground">Target (kg)</label>
+                <label className="mb-1 block text-sm text-muted-foreground">Target (lbs)</label>
                 <input
                   type="number"
-                  value={form.targetWeightKg}
-                  onChange={(e) => updateField('targetWeightKg', Number(e.target.value))}
-                  step="0.1"
+                  value={form.targetWeightLbs}
+                  onChange={(e) => updateField('targetWeightLbs', Number(e.target.value))}
+                  step="1"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>

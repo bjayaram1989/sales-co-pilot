@@ -48,7 +48,7 @@ export function SetLogger({ set, onUpdate, isPR = false }: SetLoggerProps) {
       {/* Weight */}
       <div className="flex items-center gap-1">
         <button
-          onClick={() => adjustWeight(-2.5)}
+          onClick={() => adjustWeight(-5)}
           className="rounded p-1 text-muted-foreground hover:bg-accent"
         >
           <Minus className="h-3 w-3" />
@@ -58,15 +58,15 @@ export function SetLogger({ set, onUpdate, isPR = false }: SetLoggerProps) {
           value={weight}
           onChange={(e) => onUpdate({ ...set, actualWeight: Number(e.target.value) })}
           className="w-16 rounded border border-border bg-background px-2 py-1 text-center text-sm outline-none focus:ring-1 focus:ring-ring"
-          step="0.5"
+          step="5"
         />
         <button
-          onClick={() => adjustWeight(2.5)}
+          onClick={() => adjustWeight(5)}
           className="rounded p-1 text-muted-foreground hover:bg-accent"
         >
           <Plus className="h-3 w-3" />
         </button>
-        <span className="text-xs text-muted-foreground">kg</span>
+        <span className="text-xs text-muted-foreground">lbs</span>
       </div>
 
       {/* Reps */}
