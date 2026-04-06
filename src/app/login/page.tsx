@@ -38,7 +38,11 @@ function LoginContent() {
       ? 'This email is already registered with a different method. Sign in with email and password.'
       : urlError === 'OAuthSignin'
         ? 'Google sign-in is not configured. Use email and password instead.'
-        : ''
+        : urlError === 'Configuration'
+          ? 'Server configuration error. Please try again or use email and password.'
+          : urlError === 'OAuthCallbackError'
+            ? 'Google sign-in was cancelled or failed. Please try again.'
+            : ''
   );
 
   const handleCredentialSubmit = async (e: React.FormEvent) => {

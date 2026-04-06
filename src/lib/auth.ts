@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
-import { PrismaAdapter } from '@auth/prisma-adapter';
+import { PrismaV7Adapter } from '@/lib/auth-adapter';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
@@ -9,13 +9,13 @@ const hasGoogleCredentials =
   !!process.env.AUTH_GOOGLE_ID && !!process.env.AUTH_GOOGLE_SECRET;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaV7Adapter(),
   session: { strategy: 'jwt' },
   pages: {
     signIn: '/login',
+    error: '/login',
   },
   providers: [
-    // Only include Google if credentials are configured
     ...(hasGoogleCredentials
       ? [
           Google({
@@ -49,7 +49,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             name: user.name,
             image: user.image,
           };
-        } catch {
+        } catch (e) {
+          console.error('[auth] credentials authorize error:', e);
           return null;
         }
       },
@@ -68,7 +69,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
+    async signIn({ account }) {
+      // Allow all OAuth and credential sign-ins
+      // Log for debugging production issues
+      if (account?.provider) {
+        console.log(`[auth] sign-in attempt via ${account.provider}`);
+      }
+      return true;
+    },
   },
+  debug: process.env.NODE_ENV === 'development',
 });
 
 export const googleEnabled = hasGoogleCredentials;
