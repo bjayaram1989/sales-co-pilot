@@ -65,17 +65,50 @@ Open [http://localhost:3000](http://localhost:3000) to use the app.
 
 ## Deploying to Vercel
 
+### 1. Create a Turso database (free)
+
+Vercel serverless functions have no persistent filesystem, so you need a cloud database. Turso provides free hosted LibSQL (SQLite-compatible):
+
+```bash
+# Install Turso CLI
+curl -sSfL https://get.tur.so/install.sh | bash
+
+# Sign up / log in
+turso auth signup   # or: turso auth login
+
+# Create a database
+turso db create fittrack-pro
+
+# Get the connection URL
+turso db show fittrack-pro --url
+# Output: libsql://fittrack-pro-yourname.turso.io
+
+# Create an auth token
+turso db tokens create fittrack-pro
+# Output: eyJhbGci...
+```
+
+### 2. Push the schema to Turso
+
+```bash
+# Set the production DATABASE_URL temporarily
+DATABASE_URL="libsql://fittrack-pro-yourname.turso.io" \
+DATABASE_AUTH_TOKEN="your-token" \
+npx prisma db push
+```
+
+### 3. Deploy to Vercel
+
 1. Push the repo to GitHub
 2. Import the project in [Vercel](https://vercel.com/new)
 3. Add environment variables in the Vercel dashboard:
-   - `AUTH_SECRET` - generate with `openssl rand -base64 32`
-   - `AUTH_TRUST_HOST` - set to `true`
+   - `DATABASE_URL` — your Turso URL (`libsql://fittrack-pro-yourname.turso.io`)
+   - `DATABASE_AUTH_TOKEN` — your Turso auth token
+   - `AUTH_SECRET` — generate with `openssl rand -base64 32`
+   - `AUTH_TRUST_HOST` — set to `true`
    - `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` (if using Google sign-in)
-   - `DATABASE_URL` - for production, use a PostgreSQL connection string (e.g., Vercel Postgres, Neon, or Supabase)
 4. Update the Google OAuth redirect URI to `https://your-domain.vercel.app/api/auth/callback/google`
 5. Deploy
-
-> **Note:** For production, switch the Prisma datasource from SQLite to PostgreSQL by updating `prisma/schema.prisma` and your `DATABASE_URL`.
 
 ## Project Structure
 
