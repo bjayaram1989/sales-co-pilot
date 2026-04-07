@@ -23,6 +23,13 @@ export const metadata: Metadata = {
   title: 'FitTrack Pro',
   description: 'Expert workout planner, smart nutrition tracker, and analytics dashboard',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' },
+    ],
+    apple: '/logo.svg',
+  },
 };
 
 export const viewport: Viewport = {

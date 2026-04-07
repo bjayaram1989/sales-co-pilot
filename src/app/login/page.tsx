@@ -3,7 +3,8 @@
 import { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Dumbbell, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -137,9 +138,7 @@ function LoginContent() {
     <div className="flex min-h-screen flex-col bg-background">
       {/* Hero header */}
       <div className="flex flex-col items-center justify-center bg-gradient-to-b from-primary/15 via-primary/5 to-background px-6 pb-10 pt-16">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
-          <Dumbbell className="h-8 w-8 text-primary-foreground" />
-        </div>
+        <Image src="/logo.svg" alt="FitTrack Pro" width={64} height={64} className="rounded-2xl shadow-lg shadow-primary/25" />
         <h1 className="mt-5 text-2xl font-bold tracking-tight">FitTrack Pro</h1>
         <p className="mt-1.5 max-w-xs text-center text-sm text-muted-foreground">
           Your expert workout planner, nutrition tracker &amp; analytics dashboard
