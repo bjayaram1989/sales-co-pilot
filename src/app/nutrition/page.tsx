@@ -13,10 +13,12 @@ import { calculateMacroTargets, calculateAdaptiveAdjustment } from '@/lib/algori
 import type { FoodLogEntry, FoodItem, MealType, MacroTargets } from '@/types';
 import { toDateString, formatDate } from '@/lib/utils';
 import Link from 'next/link';
+import { useUserId } from '@/hooks/use-user-id';
 
 const meals: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export default function NutritionPage() {
+  const userId = useUserId();
   const [date, setDate] = useState(toDateString());
   const [entries, setEntries] = useState<FoodLogEntry[]>([]);
   const [targets, setTargets] = useState<MacroTargets>({ calories: 2000, protein: 180, carbs: 200, fat: 65 });
@@ -24,14 +26,15 @@ export default function NutritionPage() {
   const [adjustmentNote, setAdjustmentNote] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [date]);
+    if (userId) loadData();
+  }, [date, userId]);
 
   const loadData = async () => {
+    if (!userId) return;
     const [log, profile, weights] = await Promise.all([
-      getFoodLogByDate(date),
-      getUserProfile(),
-      getWeightEntries(30),
+      getFoodLogByDate(userId, date),
+      getUserProfile(userId),
+      getWeightEntries(userId, 30),
     ]);
 
     setEntries(log);
@@ -64,9 +67,9 @@ export default function NutritionPage() {
   );
 
   const handleAddFood = async (food: FoodItem, servings: number) => {
-    if (!searchMeal) return;
+    if (!searchMeal || !userId) return;
     const factor = (food.servingSizeG * servings) / 100;
-    await addFoodLogEntry({
+    await addFoodLogEntry(userId, {
       date,
       foodItemId: food.id,
       foodName: food.name,
@@ -83,7 +86,8 @@ export default function NutritionPage() {
   };
 
   const handleDelete = async (id: number) => {
-    await deleteFoodLogEntry(id);
+    if (!userId) return;
+    await deleteFoodLogEntry(userId, id);
     loadData();
   };
 

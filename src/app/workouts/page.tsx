@@ -11,20 +11,23 @@ import { getUserProfile } from '@/lib/stores/user-store';
 import { generateNextWorkout } from '@/lib/algorithms/workout-generator';
 import type { WorkoutSession } from '@/types';
 import Link from 'next/link';
+import { useUserId } from '@/hooks/use-user-id';
 
 export default function WorkoutsPage() {
   const router = useRouter();
+  const userId = useUserId();
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    loadWorkouts();
-  }, []);
+    if (userId) loadWorkouts();
+  }, [userId]);
 
   const loadWorkouts = async () => {
+    if (!userId) return;
     try {
-      const sessions = await getRecentWorkouts(20);
+      const sessions = await getRecentWorkouts(userId, 20);
       setWorkouts(sessions);
     } finally {
       setLoading(false);
@@ -32,16 +35,17 @@ export default function WorkoutsPage() {
   };
 
   const handleGenerateWorkout = async () => {
+    if (!userId) return;
     setGenerating(true);
     try {
-      const profile = await getUserProfile();
+      const profile = await getUserProfile(userId);
       if (!profile) {
         router.push('/settings');
         return;
       }
-      const recentSessions = await getRecentWorkouts(10);
+      const recentSessions = await getRecentWorkouts(userId, 10);
       const newWorkout = generateNextWorkout(profile, recentSessions);
-      await saveWorkout(newWorkout);
+      await saveWorkout(userId, newWorkout);
       router.push(`/workouts/${newWorkout.sessionId}`);
     } catch (err) {
       console.error('Failed to generate workout:', err);

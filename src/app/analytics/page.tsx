@@ -17,8 +17,10 @@ import { getUserProfile } from '@/lib/stores/user-store';
 import { analyzeActivity } from '@/lib/algorithms/activity-analyzer';
 import type { WeightEntry, DailyActivity, WorkoutSession } from '@/types';
 import { toDateString } from '@/lib/utils';
+import { useUserId } from '@/hooks/use-user-id';
 
 export default function AnalyticsPage() {
+  const userId = useUserId();
   const [weights, setWeights] = useState<WeightEntry[]>([]);
   const [activities, setActivities] = useState<DailyActivity[]>([]);
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
@@ -28,15 +30,16 @@ export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'strength' | 'activity'>('overview');
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (userId) loadData();
+  }, [userId]);
 
   const loadData = async () => {
+    if (!userId) return;
     const [w, a, s, profile] = await Promise.all([
-      getWeightEntries(90),
-      getDailyActivities(30),
-      getRecentWorkouts(50),
-      getUserProfile(),
+      getWeightEntries(userId, 90),
+      getDailyActivities(userId, 30),
+      getRecentWorkouts(userId, 50),
+      getUserProfile(userId),
     ]);
     setWeights(w);
     setActivities(a);
@@ -45,9 +48,10 @@ export default function AnalyticsPage() {
   };
 
   const handleAddWeight = async () => {
+    if (!userId) return;
     const value = parseFloat(newWeight);
     if (isNaN(value) || value <= 0) return;
-    await addWeightEntry({
+    await addWeightEntry(userId, {
       date: toDateString(),
       weightLbs: value,
     });

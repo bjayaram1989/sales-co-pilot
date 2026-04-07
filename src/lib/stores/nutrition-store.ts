@@ -1,53 +1,53 @@
-import { db } from '@/lib/db';
+import { getDb } from '@/lib/db';
 import type { FoodLogEntry, NutritionAdjustment, WeightEntry } from '@/types';
 
 // Food Log
-export async function getFoodLogByDate(date: string): Promise<FoodLogEntry[]> {
-  return db.foodLogEntries.where('date').equals(date).toArray();
+export async function getFoodLogByDate(userId: string, date: string): Promise<FoodLogEntry[]> {
+  return getDb(userId).foodLogEntries.where('date').equals(date).toArray();
 }
 
-export async function addFoodLogEntry(entry: Omit<FoodLogEntry, 'id'>): Promise<number> {
-  return db.foodLogEntries.add(entry as FoodLogEntry) as Promise<number>;
+export async function addFoodLogEntry(userId: string, entry: Omit<FoodLogEntry, 'id'>): Promise<number> {
+  return getDb(userId).foodLogEntries.add(entry as FoodLogEntry) as Promise<number>;
 }
 
-export async function updateFoodLogEntry(id: number, entry: Partial<FoodLogEntry>): Promise<void> {
-  await db.foodLogEntries.update(id, entry);
+export async function updateFoodLogEntry(userId: string, id: number, entry: Partial<FoodLogEntry>): Promise<void> {
+  await getDb(userId).foodLogEntries.update(id, entry);
 }
 
-export async function deleteFoodLogEntry(id: number): Promise<void> {
-  await db.foodLogEntries.delete(id);
+export async function deleteFoodLogEntry(userId: string, id: number): Promise<void> {
+  await getDb(userId).foodLogEntries.delete(id);
 }
 
-export async function getFoodLogByDateRange(startDate: string, endDate: string): Promise<FoodLogEntry[]> {
-  return db.foodLogEntries
+export async function getFoodLogByDateRange(userId: string, startDate: string, endDate: string): Promise<FoodLogEntry[]> {
+  return getDb(userId).foodLogEntries
     .where('date')
     .between(startDate, endDate, true, true)
     .toArray();
 }
 
 // Weight Entries
-export async function getWeightEntries(limit = 90): Promise<WeightEntry[]> {
-  return db.weightEntries.orderBy('date').reverse().limit(limit).toArray();
+export async function getWeightEntries(userId: string, limit = 90): Promise<WeightEntry[]> {
+  return getDb(userId).weightEntries.orderBy('date').reverse().limit(limit).toArray();
 }
 
-export async function addWeightEntry(entry: Omit<WeightEntry, 'id'>): Promise<number> {
-  const existing = await db.weightEntries.where('date').equals(entry.date).first();
+export async function addWeightEntry(userId: string, entry: Omit<WeightEntry, 'id'>): Promise<number> {
+  const existing = await getDb(userId).weightEntries.where('date').equals(entry.date).first();
   if (existing?.id != null) {
-    await db.weightEntries.update(existing.id, entry);
+    await getDb(userId).weightEntries.update(existing.id, entry);
     return existing.id;
   }
-  return db.weightEntries.add(entry as WeightEntry) as Promise<number>;
+  return getDb(userId).weightEntries.add(entry as WeightEntry) as Promise<number>;
 }
 
-export async function deleteWeightEntry(id: number): Promise<void> {
-  await db.weightEntries.delete(id);
+export async function deleteWeightEntry(userId: string, id: number): Promise<void> {
+  await getDb(userId).weightEntries.delete(id);
 }
 
 // Nutrition Adjustments
-export async function getNutritionAdjustments(): Promise<NutritionAdjustment[]> {
-  return db.nutritionAdjustments.orderBy('date').reverse().toArray();
+export async function getNutritionAdjustments(userId: string): Promise<NutritionAdjustment[]> {
+  return getDb(userId).nutritionAdjustments.orderBy('date').reverse().toArray();
 }
 
-export async function saveNutritionAdjustment(adjustment: Omit<NutritionAdjustment, 'id'>): Promise<number> {
-  return db.nutritionAdjustments.add(adjustment as NutritionAdjustment) as Promise<number>;
+export async function saveNutritionAdjustment(userId: string, adjustment: Omit<NutritionAdjustment, 'id'>): Promise<number> {
+  return getDb(userId).nutritionAdjustments.add(adjustment as NutritionAdjustment) as Promise<number>;
 }

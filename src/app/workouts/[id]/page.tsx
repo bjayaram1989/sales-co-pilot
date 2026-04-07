@@ -9,10 +9,12 @@ import { getWorkoutById, saveWorkout, savePersonalRecord, getPersonalRecords } f
 import { checkPersonalRecord } from '@/lib/algorithms/progressive-overload';
 import type { WorkoutSession, WorkoutSet, PersonalRecord } from '@/types';
 import { cn } from '@/lib/utils';
+import { useUserId } from '@/hooks/use-user-id';
 
 export default function WorkoutSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const userId = useUserId();
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [startTime] = useState(Date.now());
   const [elapsed, setElapsed] = useState(0);
@@ -22,9 +24,11 @@ export default function WorkoutSessionPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSession();
-    loadPRs();
-  }, [id]);
+    if (userId) {
+      loadSession();
+      loadPRs();
+    }
+  }, [id, userId]);
 
   // Elapsed time counter
   useEffect(() => {
@@ -48,18 +52,20 @@ export default function WorkoutSessionPage({ params }: { params: Promise<{ id: s
   }, [restTimer]);
 
   const loadSession = async () => {
-    const s = await getWorkoutById(id);
+    if (!userId) return;
+    const s = await getWorkoutById(userId, id);
     setSession(s ?? null);
     setLoading(false);
   };
 
   const loadPRs = async () => {
-    const allPRs = await getPersonalRecords();
+    if (!userId) return;
+    const allPRs = await getPersonalRecords(userId);
     setPrs(allPRs);
   };
 
   const handleUpdateSets = useCallback(async (exerciseIndex: number, sets: WorkoutSet[]) => {
-    if (!session) return;
+    if (!session || !userId) return;
 
     const updatedSession = { ...session };
     updatedSession.exercises = [...session.exercises];
@@ -86,7 +92,7 @@ export default function WorkoutSessionPage({ params }: { params: Promise<{ id: s
           prs,
         );
         if (isPR) {
-          await savePersonalRecord({
+          await savePersonalRecord(userId, {
             exerciseId: exercise.exerciseId,
             exerciseName: exercise.exerciseName,
             weight: justCompleted.actualWeight,
@@ -100,11 +106,11 @@ export default function WorkoutSessionPage({ params }: { params: Promise<{ id: s
     }
 
     setSession(updatedSession);
-    await saveWorkout(updatedSession);
-  }, [session, prs]);
+    await saveWorkout(userId, updatedSession);
+  }, [session, prs, userId]);
 
   const handleFinish = async () => {
-    if (!session) return;
+    if (!session || !userId) return;
     const duration = Math.round(elapsed / 60);
     const completed = {
       ...session,
@@ -112,7 +118,7 @@ export default function WorkoutSessionPage({ params }: { params: Promise<{ id: s
       duration,
     };
     setSession(completed);
-    await saveWorkout(completed);
+    await saveWorkout(userId, completed);
   };
 
   const formatTime = (seconds: number) => {

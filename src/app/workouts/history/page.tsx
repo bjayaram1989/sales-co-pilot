@@ -7,17 +7,21 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { History } from 'lucide-react';
 import { getRecentWorkouts } from '@/lib/stores/workout-store';
 import type { WorkoutSession } from '@/types';
+import { useUserId } from '@/hooks/use-user-id';
 
 export default function WorkoutHistoryPage() {
+  const userId = useUserId();
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getRecentWorkouts(50).then((sessions) => {
-      setWorkouts(sessions.filter((s) => s.completed));
-      setLoading(false);
-    });
-  }, []);
+    if (userId) {
+      getRecentWorkouts(userId, 50).then((sessions) => {
+        setWorkouts(sessions.filter((s) => s.completed));
+        setLoading(false);
+      });
+    }
+  }, [userId]);
 
   // Group by week
   const groupedByWeek = workouts.reduce<Record<string, WorkoutSession[]>>((acc, session) => {

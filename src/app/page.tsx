@@ -18,9 +18,11 @@ import { analyzeActivity, shouldSuggestRestDay } from '@/lib/algorithms/activity
 import { generateNextWorkout } from '@/lib/algorithms/workout-generator';
 import type { UserProfile, WorkoutSession } from '@/types';
 import { toDateString } from '@/lib/utils';
+import { useUserId } from '@/hooks/use-user-id';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const userId = useUserId();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [todayCalories, setTodayCalories] = useState({ eaten: 0, target: 0 });
@@ -31,16 +33,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (userId) loadDashboard();
+  }, [userId]);
 
   const loadDashboard = async () => {
+    if (!userId) return;
     try {
       const [p, w, weights, activities] = await Promise.all([
-        getUserProfile(),
-        getRecentWorkouts(20),
-        getWeightEntries(30),
-        getDailyActivities(14),
+        getUserProfile(userId),
+        getRecentWorkouts(userId, 20),
+        getWeightEntries(userId, 30),
+        getDailyActivities(userId, 14),
       ]);
 
       setProfile(p ?? null);
@@ -48,7 +51,7 @@ export default function DashboardPage() {
 
       if (p) {
         const macros = calculateMacroTargets(p);
-        const todayLog = await getFoodLogByDate(toDateString());
+        const todayLog = await getFoodLogByDate(userId, toDateString());
         const eaten = todayLog.reduce((acc, e) => ({
           calories: acc.calories + e.calories,
           protein: acc.protein + e.protein,
@@ -97,15 +100,15 @@ export default function DashboardPage() {
   };
 
   const handleStartWorkout = async () => {
-    if (!profile) {
+    if (!userId || !profile) {
       router.push('/settings');
       return;
     }
     setGenerating(true);
     try {
-      const recentSessions = await getRecentWorkouts(10);
+      const recentSessions = await getRecentWorkouts(userId, 10);
       const newWorkout = generateNextWorkout(profile, recentSessions);
-      await saveWorkout(newWorkout);
+      await saveWorkout(userId, newWorkout);
       router.push(`/workouts/${newWorkout.sessionId}`);
     } finally {
       setGenerating(false);

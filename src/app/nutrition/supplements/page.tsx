@@ -6,18 +6,22 @@ import { SupplementCard } from '@/components/nutrition/supplement-card';
 import { supplements, getSupplementsByGoal, getCoreSupplements } from '@/lib/data/supplements';
 import { getUserProfile } from '@/lib/stores/user-store';
 import type { Supplement, Goal } from '@/types';
+import { useUserId } from '@/hooks/use-user-id';
 
 export default function SupplementsPage() {
+  const userId = useUserId();
   const [goal, setGoal] = useState<Goal>('fat_loss');
   const [recommended, setRecommended] = useState<Supplement[]>([]);
 
   useEffect(() => {
-    getUserProfile().then((profile) => {
-      if (profile) {
-        setGoal(profile.goal);
-      }
-    });
-  }, []);
+    if (userId) {
+      getUserProfile(userId).then((profile) => {
+        if (profile) {
+          setGoal(profile.goal);
+        }
+      });
+    }
+  }, [userId]);
 
   useEffect(() => {
     const core = getCoreSupplements();

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { signOut } from 'next-auth/react';
 import { Header } from '@/components/layout/header';
-import { Moon, Sun, Monitor, Save, User } from 'lucide-react';
+import { Moon, Sun, Monitor, Save, User, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { getUserProfile, saveUserProfile } from '@/lib/stores/user-store';
 import type { UserProfile, ActivityLevel, Goal, ExperienceLevel, WorkoutSplit } from '@/types';
 import { cn } from '@/lib/utils';
+import { useUserId } from '@/hooks/use-user-id';
 
 const goalOptions: { value: Goal; label: string; desc: string }[] = [
   { value: 'fat_loss', label: 'Fat Loss', desc: 'Maximize fat loss, preserve muscle' },
@@ -38,6 +40,7 @@ const splitOptions: { value: WorkoutSplit; label: string; desc: string }[] = [
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const userId = useUserId();
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -56,29 +59,32 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true);
-    getUserProfile().then((profile) => {
-      if (profile) {
-        setForm({
-          name: profile.name,
-          age: profile.age,
-          gender: profile.gender,
-          heightCm: profile.heightCm,
-          currentWeightLbs: profile.currentWeightLbs,
-          targetWeightLbs: profile.targetWeightLbs,
-          activityLevel: profile.activityLevel,
-          goal: profile.goal,
-          experienceLevel: profile.experienceLevel,
-          preferredSplit: profile.preferredSplit,
-        });
-      }
-    });
-  }, []);
+    if (userId) {
+      getUserProfile(userId).then((profile) => {
+        if (profile) {
+          setForm({
+            name: profile.name,
+            age: profile.age,
+            gender: profile.gender,
+            heightCm: profile.heightCm,
+            currentWeightLbs: profile.currentWeightLbs,
+            targetWeightLbs: profile.targetWeightLbs,
+            activityLevel: profile.activityLevel,
+            goal: profile.goal,
+            experienceLevel: profile.experienceLevel,
+            preferredSplit: profile.preferredSplit,
+          });
+        }
+      });
+    }
+  }, [userId]);
 
   const handleSave = async () => {
+    if (!userId) return;
     setSaving(true);
     try {
-      const existing = await getUserProfile();
-      await saveUserProfile({ ...form, id: existing?.id });
+      const existing = await getUserProfile(userId);
+      await saveUserProfile(userId, { ...form, id: existing?.id });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -112,6 +118,13 @@ export default function SettingsPage() {
       />
 
       <div className="mx-auto max-w-lg space-y-6 p-4">
+        {/* Save feedback note */}
+        {saved && (
+          <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
+            Profile saved to this device. Your data is stored locally in your browser, tied to your account.
+          </div>
+        )}
+
         {/* Profile Section */}
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="mb-4 flex items-center gap-2">
@@ -321,6 +334,27 @@ export default function SettingsPage() {
             </div>
           </section>
         )}
+
+        {/* Data Storage Info */}
+        <section className="rounded-xl border border-border bg-card p-4">
+          <h2 className="mb-2 text-base font-semibold">Data Storage</h2>
+          <p className="text-sm text-muted-foreground">
+            Your fitness data (profile, workouts, nutrition, weight) is stored locally in your browser, tied to your account. Data persists across sessions on this device.
+          </p>
+        </section>
+
+        {/* Logout */}
+        <section>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 py-3 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+        </section>
+
+        <div className="h-4" />
       </div>
     </div>
   );
