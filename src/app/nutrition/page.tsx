@@ -5,13 +5,14 @@ import { Header } from '@/components/layout/header';
 import { MacroRing } from '@/components/nutrition/macro-ring';
 import { MealCard } from '@/components/nutrition/meal-card';
 import { FoodSearch } from '@/components/nutrition/food-search';
+import { DatePicker } from '@/components/shared/date-picker';
 import { Pill, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { getFoodLogByDate, addFoodLogEntry, deleteFoodLogEntry } from '@/lib/stores/nutrition-store';
 import { getWeightEntries } from '@/lib/stores/nutrition-store';
 import { getUserProfile } from '@/lib/stores/user-store';
 import { calculateMacroTargets, calculateAdaptiveAdjustment } from '@/lib/algorithms/macro-calculator';
 import type { FoodLogEntry, FoodItem, MealType, MacroTargets } from '@/types';
-import { toDateString, formatDate } from '@/lib/utils';
+import { toDateString } from '@/lib/utils';
 import Link from 'next/link';
 
 const meals: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
@@ -88,7 +89,7 @@ export default function NutritionPage() {
   };
 
   const changeDate = (delta: number) => {
-    const d = new Date(date);
+    const d = new Date(date + 'T00:00:00');
     d.setDate(d.getDate() + delta);
     setDate(toDateString(d));
   };
@@ -111,12 +112,12 @@ export default function NutritionPage() {
       />
 
       <div className="mx-auto max-w-lg space-y-6 p-4">
-        {/* Date Selector */}
+        {/* Date Selector with Calendar */}
         <div className="flex items-center justify-between">
           <button onClick={() => changeDate(-1)} className="rounded-lg p-2 hover:bg-accent">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="font-semibold">{isToday ? 'Today' : formatDate(date)}</span>
+          <DatePicker value={date} onChange={setDate} maxDate={toDateString()} />
           <button onClick={() => changeDate(1)} className="rounded-lg p-2 hover:bg-accent" disabled={isToday}>
             <ChevronRight className="h-5 w-5 disabled:opacity-30" />
           </button>

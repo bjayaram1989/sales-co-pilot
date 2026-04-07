@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signOut } from 'next-auth/react';
 import { Header } from '@/components/layout/header';
-import { Moon, Sun, Monitor, Save, User, LogOut } from 'lucide-react';
+import { Moon, Sun, Monitor, Save, User, LogOut, Check, ExternalLink } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { getUserProfile, saveUserProfile } from '@/lib/stores/user-store';
-import type { UserProfile, ActivityLevel, Goal, ExperienceLevel, WorkoutSplit } from '@/types';
+import type { ActivityLevel, Goal, ExperienceLevel, WorkoutSplit } from '@/types';
 import { cn } from '@/lib/utils';
 
 const goalOptions: { value: Goal; label: string; desc: string }[] = [
@@ -37,29 +37,44 @@ const splitOptions: { value: WorkoutSplit; label: string; desc: string }[] = [
   { value: 'bro_split', label: 'Body Part Split', desc: '5 days/week, classic' },
 ];
 
+type FormState = {
+  name: string;
+  age: number;
+  gender: 'male' | 'female';
+  heightCm: number;
+  currentWeightLbs: number;
+  targetWeightLbs: number;
+  activityLevel: ActivityLevel;
+  goal: Goal;
+  experienceLevel: ExperienceLevel;
+  preferredSplit: WorkoutSplit;
+};
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState({
+  const [dirty, setDirty] = useState(false);
+  const savedFormRef = useRef<string>('');
+  const [form, setForm] = useState<FormState>({
     name: '',
     age: 25,
-    gender: 'male' as 'male' | 'female',
+    gender: 'male',
     heightCm: 175,
     currentWeightLbs: 175,
     targetWeightLbs: 165,
-    activityLevel: 'moderate' as ActivityLevel,
-    goal: 'fat_loss' as Goal,
-    experienceLevel: 'intermediate' as ExperienceLevel,
-    preferredSplit: 'ppl' as WorkoutSplit,
+    activityLevel: 'moderate',
+    goal: 'fat_loss',
+    experienceLevel: 'intermediate',
+    preferredSplit: 'ppl',
   });
 
   useEffect(() => {
     setMounted(true);
     getUserProfile().then((profile) => {
       if (profile) {
-        setForm({
+        const loaded: FormState = {
           name: profile.name,
           age: profile.age,
           gender: profile.gender,
@@ -70,7 +85,10 @@ export default function SettingsPage() {
           goal: profile.goal,
           experienceLevel: profile.experienceLevel,
           preferredSplit: profile.preferredSplit,
-        });
+        };
+        setForm(loaded);
+        savedFormRef.current = JSON.stringify(loaded);
+        setSaved(true);
       }
     });
   }, []);
@@ -80,16 +98,25 @@ export default function SettingsPage() {
     try {
       const existing = await getUserProfile();
       await saveUserProfile({ ...form, id: existing?.id });
+      savedFormRef.current = JSON.stringify(form);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setDirty(false);
     } finally {
       setSaving(false);
     }
   };
 
-  const updateField = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      const isDirty = JSON.stringify(next) !== savedFormRef.current;
+      setDirty(isDirty);
+      if (isDirty) setSaved(false);
+      return next;
+    });
   };
+
+  const buttonState = saved && !dirty ? 'saved' : saving ? 'saving' : 'save';
 
   return (
     <div className="min-h-screen">
@@ -98,28 +125,21 @@ export default function SettingsPage() {
         action={
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || (saved && !dirty)}
             className={cn(
               'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              saved
+              buttonState === 'saved'
                 ? 'bg-success/20 text-success'
                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
             )}
           >
-            <Save className="h-4 w-4" />
-            {saved ? 'Saved!' : saving ? 'Saving...' : 'Save'}
+            {buttonState === 'saved' ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+            {buttonState === 'saved' ? 'Saved' : buttonState === 'saving' ? 'Saving...' : 'Save'}
           </button>
         }
       />
 
       <div className="mx-auto max-w-lg space-y-6 p-4">
-        {/* Save feedback note */}
-        {saved && (
-          <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
-            Profile saved successfully. Your data is synced to the cloud and accessible from any device.
-          </div>
-        )}
-
         {/* Profile Section */}
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="mb-4 flex items-center gap-2">
@@ -330,11 +350,36 @@ export default function SettingsPage() {
           </section>
         )}
 
+        {/* Integrations */}
+        <section className="rounded-xl border border-border bg-card p-4">
+          <h2 className="mb-3 text-base font-semibold">Integrations</h2>
+          <div className="space-y-3">
+            <IntegrationRow
+              name="MyFitnessPal"
+              description="Import your food diary and nutrition data"
+              exportUrl="https://www.myfitnesspal.com/food/diary"
+              instructions="Export your food diary as CSV from MyFitnessPal's website, then import it on the Nutrition page."
+            />
+            <IntegrationRow
+              name="MacroFactor"
+              description="Sync macro targets and expenditure data"
+              exportUrl="https://help.macrofactorapp.com/exporting_data"
+              instructions="Export your data from MacroFactor Settings > Export Data, then use the CSV to set up your macro targets here."
+            />
+            <IntegrationRow
+              name="Apple Health"
+              description="Auto-sync steps, calories, and weight"
+              href="/settings/health-sync"
+              instructions="Set up an iOS Shortcut to automatically push your Apple Health data to FitTrack every night."
+            />
+          </div>
+        </section>
+
         {/* Data Storage Info */}
         <section className="rounded-xl border border-border bg-card p-4">
           <h2 className="mb-2 text-base font-semibold">Data Storage</h2>
           <p className="text-sm text-muted-foreground">
-            Your fitness data (profile, workouts, nutrition, weight) is stored securely in the cloud, tied to your account. Data persists across all your devices and browsers.
+            Your fitness data is stored securely in the cloud, tied to your account. Data persists across all your devices and browsers.
           </p>
         </section>
 
@@ -351,6 +396,63 @@ export default function SettingsPage() {
 
         <div className="h-4" />
       </div>
+    </div>
+  );
+}
+
+function IntegrationRow({
+  name,
+  description,
+  exportUrl,
+  href,
+  instructions,
+}: {
+  name: string;
+  description: string;
+  exportUrl?: string;
+  href?: string;
+  instructions: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-background">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between p-3 text-left"
+      >
+        <div>
+          <div className="text-sm font-medium">{name}</div>
+          <div className="text-xs text-muted-foreground">{description}</div>
+        </div>
+        <span className="text-xs text-muted-foreground">{expanded ? 'Hide' : 'Setup'}</span>
+      </button>
+      {expanded && (
+        <div className="border-t border-border/50 px-3 pb-3 pt-2">
+          <p className="text-xs text-muted-foreground leading-relaxed">{instructions}</p>
+          <div className="mt-2 flex gap-2">
+            {exportUrl && (
+              <a
+                href={exportUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Open {name}
+              </a>
+            )}
+            {href && (
+              <a
+                href={href}
+                className="flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+              >
+                Configure
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

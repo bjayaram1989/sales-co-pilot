@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { WorkoutCard } from '@/components/workouts/workout-card';
 import { EmptyState } from '@/components/shared/empty-state';
-import { Dumbbell, Plus, History, Sparkles } from 'lucide-react';
+import { Dumbbell, Plus, History, Sparkles, CalendarDays, Check } from 'lucide-react';
 import { getRecentWorkouts, saveWorkout } from '@/lib/stores/workout-store';
 import { getUserProfile } from '@/lib/stores/user-store';
-import { generateNextWorkout } from '@/lib/algorithms/workout-generator';
+import { generateNextWorkout, generateWeekPlan } from '@/lib/algorithms/workout-generator';
 import type { WorkoutSession } from '@/types';
 import Link from 'next/link';
 
@@ -17,6 +17,8 @@ export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generatingWeek, setGeneratingWeek] = useState(false);
+  const [weekGenerated, setWeekGenerated] = useState(false);
 
   useEffect(() => {
     loadWorkouts();
@@ -50,11 +52,35 @@ export default function WorkoutsPage() {
     }
   };
 
+  const handleGenerateWeek = async () => {
+    setGeneratingWeek(true);
+    try {
+      const profile = await getUserProfile();
+      if (!profile) {
+        router.push('/settings');
+        return;
+      }
+      const recentSessions = await getRecentWorkouts(10);
+      const weekSessions = generateWeekPlan(profile, recentSessions);
+      for (const session of weekSessions) {
+        await saveWorkout(session);
+      }
+      setWeekGenerated(true);
+      setTimeout(() => setWeekGenerated(false), 3000);
+      loadWorkouts();
+    } catch (err) {
+      console.error('Failed to generate week plan:', err);
+    } finally {
+      setGeneratingWeek(false);
+    }
+  };
+
   // Find today's incomplete workout
   const today = new Date().toISOString().split('T')[0];
   const todayWorkout = workouts.find((w) => w.date === today && !w.completed);
   const completedWorkouts = workouts.filter((w) => w.completed);
-  const incompleteWorkouts = workouts.filter((w) => !w.completed && w.date !== today);
+  const upcomingWorkouts = workouts.filter((w) => !w.completed && w.date > today);
+  const incompleteWorkouts = workouts.filter((w) => !w.completed && w.date !== today && w.date <= today);
 
   return (
     <div className="min-h-screen">
@@ -72,21 +98,44 @@ export default function WorkoutsPage() {
       />
 
       <div className="mx-auto max-w-lg space-y-6 p-4">
-        {/* Generate Workout Button */}
-        <button
-          onClick={handleGenerateWorkout}
-          disabled={generating}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-6 text-primary transition-colors hover:border-primary/60 hover:bg-primary/10"
-        >
-          {generating ? (
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          ) : (
-            <Sparkles className="h-5 w-5" />
-          )}
-          <span className="font-semibold">
-            {generating ? 'Generating...' : 'Generate Next Workout'}
-          </span>
-        </button>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={handleGenerateWorkout}
+            disabled={generating}
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4 text-primary transition-colors hover:border-primary/60 hover:bg-primary/10"
+          >
+            {generating ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            <span className="text-sm font-semibold">
+              {generating ? 'Generating...' : 'Next Workout'}
+            </span>
+          </button>
+
+          <button
+            onClick={handleGenerateWeek}
+            disabled={generatingWeek}
+            className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 transition-colors ${
+              weekGenerated
+                ? 'border-success/30 bg-success/5 text-success'
+                : 'border-primary/30 bg-primary/5 text-primary hover:border-primary/60 hover:bg-primary/10'
+            }`}
+          >
+            {generatingWeek ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            ) : weekGenerated ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <CalendarDays className="h-4 w-4" />
+            )}
+            <span className="text-sm font-semibold">
+              {generatingWeek ? 'Planning...' : weekGenerated ? 'Week Planned!' : 'Plan Week'}
+            </span>
+          </button>
+        </div>
 
         {/* Today's Workout */}
         {todayWorkout && (
@@ -95,6 +144,20 @@ export default function WorkoutsPage() {
               Today
             </h2>
             <WorkoutCard session={todayWorkout} />
+          </section>
+        )}
+
+        {/* Upcoming Workouts */}
+        {upcomingWorkouts.length > 0 && (
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Upcoming
+            </h2>
+            <div className="space-y-3">
+              {upcomingWorkouts.map((session) => (
+                <WorkoutCard key={session.sessionId} session={session} />
+              ))}
+            </div>
           </section>
         )}
 

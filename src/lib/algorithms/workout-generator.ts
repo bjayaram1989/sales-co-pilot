@@ -142,6 +142,94 @@ function estimateStartingWeight(exerciseId: string, experience: string, gender: 
   return Math.round(weight / 5) * 5; // Round to nearest 5 lbs
 }
 
+export function generateWeekPlan(
+  profile: UserProfile,
+  recentSessions: WorkoutSession[],
+): WorkoutSession[] {
+  const plan = getWorkoutPlan(profile.preferredSplit);
+  if (!plan) {
+    throw new Error(`Unknown split: ${profile.preferredSplit}`);
+  }
+
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun
+  // Start from next Monday (or today if Monday)
+  const monday = new Date(today);
+  const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
+  monday.setDate(today.getDate() + daysUntilMonday);
+
+  const weekNumber = getWeekNumber(monday);
+  const isDeload = shouldDeload(weekNumber);
+  const sessions: WorkoutSession[] = [];
+
+  // Use all templates in the plan for the week
+  let accumulated = [...recentSessions];
+  for (let i = 0; i < plan.templates.length; i++) {
+    const template = plan.templates[i];
+    const sessionDate = new Date(monday);
+    // Spread workouts across the week with rest days
+    const dayOffsets3 = [0, 2, 4];
+    const dayOffsets4 = [0, 1, 3, 4];
+    if (plan.daysPerWeek <= 3) {
+      sessionDate.setDate(monday.getDate() + (dayOffsets3[i] !== undefined ? dayOffsets3[i] : i * 2));
+    } else if (plan.daysPerWeek <= 4) {
+      sessionDate.setDate(monday.getDate() + (dayOffsets4[i] !== undefined ? dayOffsets4[i] : i));
+    } else {
+      sessionDate.setDate(monday.getDate() + i);
+    }
+
+    const exercises: WorkoutExercise[] = template.exercises.map(templateExercise => {
+      const exerciseInfo = getExerciseById(templateExercise.exerciseId);
+      const exerciseType = exerciseInfo?.type ?? 'compound';
+      let lastWeight = getLastWeight(templateExercise.exerciseId, accumulated);
+      if (lastWeight === 0) {
+        lastWeight = estimateStartingWeight(templateExercise.exerciseId, profile.experienceLevel, profile.gender);
+      }
+      const progression = calculateProgression(
+        templateExercise.exerciseId, exerciseType, lastWeight, templateExercise.reps, accumulated,
+      );
+      let targetWeight = progression.newWeight;
+      let sets = templateExercise.sets;
+      let reps = templateExercise.reps;
+      if (isDeload) {
+        const deloaded = applyDeload(targetWeight, sets);
+        targetWeight = deloaded.weight;
+        sets = deloaded.sets;
+      }
+      let restSeconds = templateExercise.restSeconds;
+      if (profile.goal === 'fat_loss') {
+        reps = Math.min(reps + 2, 15);
+        restSeconds = Math.max(restSeconds - 15, 45);
+      }
+      const workoutSets: WorkoutSet[] = Array.from({ length: sets }, (_, j) => ({
+        setNumber: j + 1, targetReps: reps, targetWeight, completed: false,
+      }));
+      return {
+        exerciseId: templateExercise.exerciseId,
+        exerciseName: exerciseInfo?.name ?? templateExercise.exerciseId,
+        sets: workoutSets, restSeconds,
+        isSuperset: templateExercise.isSuperset,
+        supersetWith: templateExercise.supersetWith,
+      };
+    });
+
+    const session: WorkoutSession = {
+      sessionId: generateId(),
+      date: sessionDate.toISOString().split('T')[0],
+      name: isDeload ? `${template.name} (Deload)` : template.name,
+      splitDay: template.splitDay,
+      exercises,
+      completed: false,
+      weekNumber,
+      isDeload,
+    };
+    sessions.push(session);
+    accumulated = [session, ...accumulated];
+  }
+
+  return sessions;
+}
+
 export function getWorkoutSplitDescription(split: string): string {
   const descriptions: Record<string, string> = {
     ppl: 'Push/Pull/Legs - 6 days/week. High volume, great for intermediate+.',

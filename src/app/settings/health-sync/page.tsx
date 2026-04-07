@@ -2,47 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/header';
-import { Smartphone, Copy, Check, RefreshCw, ArrowRight } from 'lucide-react';
+import { Smartphone, Copy, Check, RefreshCw } from 'lucide-react';
 import { getUserProfile, saveUserProfile } from '@/lib/stores/user-store';
 import { generateId } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
-const setupSteps = [
-  {
-    title: 'Open the Shortcuts app on your iPhone',
-    detail: 'If you don\'t have it, download it free from the App Store.',
-  },
-  {
-    title: 'Create a new Shortcut',
-    detail: 'Tap the + button in the top right corner.',
-  },
-  {
-    title: 'Add these actions in order:',
-    detail: `
-1. "Find Health Samples" → Type: Steps, Start Date: Start of Today
-2. "Calculate Statistics" → Operation: Sum
-3. Store result in variable "steps"
-4. "Find Health Samples" → Type: Active Energy, Start Date: Start of Today
-5. "Calculate Statistics" → Operation: Sum
-6. Store result in variable "calories"
-7. "Get Contents of URL" → Method: POST
-   - URL: [Your app URL]/api/health-sync
-   - Body: JSON with apiKey, date (Current Date), steps, calories
-    `.trim(),
-  },
-  {
-    title: 'Set up Automation',
-    detail: 'Go to Automations tab → Personal Automation → Time of Day → 11 PM → Run this Shortcut → Turn off "Ask Before Running".',
-  },
-  {
-    title: 'Test the connection',
-    detail: 'Run the shortcut manually once to verify data arrives correctly.',
-  },
-];
-
 export default function HealthSyncPage() {
   const [apiKey, setApiKey] = useState<string>('');
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const [appUrl, setAppUrl] = useState('');
 
   useEffect(() => {
@@ -63,11 +30,13 @@ export default function HealthSyncPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
   };
+
+  const endpointUrl = `${appUrl}/api/health-sync`;
 
   const samplePayload = JSON.stringify({
     apiKey: apiKey || 'YOUR_API_KEY',
@@ -75,7 +44,7 @@ export default function HealthSyncPage() {
     steps: 8500,
     activeCalories: 350,
     restingHeartRate: 62,
-    weight: 80.5,
+    weight: 175,
   }, null, 2);
 
   return (
@@ -98,19 +67,25 @@ export default function HealthSyncPage() {
           </div>
         </div>
 
-        {/* API Key */}
+        {/* Step 1: Generate API Key */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 font-semibold">Your API Key</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</div>
+            <h3 className="font-semibold">Generate Your API Key</h3>
+          </div>
+          <p className="mb-3 text-sm text-muted-foreground">
+            This key authenticates your iPhone shortcut with your FitTrack account.
+          </p>
           {apiKey ? (
             <div className="flex items-center gap-2">
               <code className="flex-1 rounded-lg bg-muted px-3 py-2 font-mono text-xs break-all">
                 {apiKey}
               </code>
               <button
-                onClick={() => copyToClipboard(apiKey)}
+                onClick={() => copyToClipboard(apiKey, 'apiKey')}
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied === 'apiKey' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
               </button>
             </div>
           ) : (
@@ -124,43 +99,91 @@ export default function HealthSyncPage() {
           )}
         </div>
 
-        {/* Endpoint */}
+        {/* Step 2: Copy Endpoint URL */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-3 font-semibold">API Endpoint</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</div>
+            <h3 className="font-semibold">Copy Your Endpoint URL</h3>
+          </div>
+          <p className="mb-3 text-sm text-muted-foreground">
+            This is the URL your iPhone shortcut will send data to.
+          </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 rounded-lg bg-muted px-3 py-2 font-mono text-xs break-all">
-              POST {appUrl}/api/health-sync
+              {endpointUrl}
             </code>
             <button
-              onClick={() => copyToClipboard(`${appUrl}/api/health-sync`)}
+              onClick={() => copyToClipboard(endpointUrl, 'url')}
               className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
             >
-              <Copy className="h-4 w-4" />
+              {copied === 'url' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
-
-          <h4 className="mt-4 mb-2 text-sm font-medium text-muted-foreground">Sample JSON Body:</h4>
-          <pre className="rounded-lg bg-muted p-3 font-mono text-xs overflow-x-auto">
-            {samplePayload}
-          </pre>
         </div>
 
-        {/* Setup Steps */}
+        {/* Step 3: Create the iOS Shortcut */}
         <div className="rounded-xl border border-border bg-card p-4">
-          <h3 className="mb-4 font-semibold">Setup Guide</h3>
-          <div className="space-y-4">
-            {setupSteps.map((step, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {i + 1}
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium">{step.title}</h4>
-                  <p className="mt-0.5 text-xs text-muted-foreground whitespace-pre-line">{step.detail}</p>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</div>
+            <h3 className="font-semibold">Create the iOS Shortcut</h3>
           </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Open the <strong>Shortcuts</strong> app on your iPhone and create a new shortcut with these actions:
+          </p>
+          <div className="space-y-3">
+            <Step num="A" title="Get today's steps">
+              Add <strong>&quot;Find Health Samples&quot;</strong> action. Set Type to <strong>Steps</strong>, Start Date to <strong>Start of Today</strong>. Then add <strong>&quot;Calculate Statistics&quot;</strong> and set Operation to <strong>Sum</strong>.
+            </Step>
+            <Step num="B" title="Get active calories">
+              Add another <strong>&quot;Find Health Samples&quot;</strong> action. Set Type to <strong>Active Energy</strong>, Start Date to <strong>Start of Today</strong>. Then add <strong>&quot;Calculate Statistics&quot;</strong> (Sum).
+            </Step>
+            <Step num="C" title="Send data to FitTrack">
+              Add <strong>&quot;Get Contents of URL&quot;</strong> action:
+              <ul className="mt-2 ml-4 space-y-1 text-xs text-muted-foreground list-disc">
+                <li>URL: paste your endpoint URL from Step 2</li>
+                <li>Method: <strong>POST</strong></li>
+                <li>Request Body: <strong>JSON</strong></li>
+                <li>Add these keys:</li>
+              </ul>
+              <div className="mt-2">
+                <pre className="rounded-lg bg-muted p-3 font-mono text-xs overflow-x-auto">
+                  {samplePayload}
+                </pre>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Replace the <code className="bg-muted px-1 rounded">steps</code> and <code className="bg-muted px-1 rounded">activeCalories</code> values with the variables from steps A and B.
+              </p>
+            </Step>
+          </div>
+        </div>
+
+        {/* Step 4: Automate */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">4</div>
+            <h3 className="font-semibold">Automate It (Optional)</h3>
+          </div>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>To sync automatically every night:</p>
+            <ol className="ml-4 space-y-1 list-decimal">
+              <li>Go to the <strong>Automations</strong> tab in Shortcuts</li>
+              <li>Tap <strong>+</strong> &rarr; <strong>Time of Day</strong></li>
+              <li>Set time to <strong>11:00 PM</strong></li>
+              <li>Select your new shortcut</li>
+              <li>Turn off <strong>&quot;Ask Before Running&quot;</strong></li>
+            </ol>
+          </div>
+        </div>
+
+        {/* Step 5: Test */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">5</div>
+            <h3 className="font-semibold">Test the Connection</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Run the shortcut manually once. If successful, you&apos;ll see your step count and calories appear on the Analytics page.
+          </p>
         </div>
 
         {/* Manual Entry Note */}
@@ -168,6 +191,18 @@ export default function HealthSyncPage() {
           Don&apos;t have an iPhone? You can manually log steps and activity from the Analytics page.
         </div>
       </div>
+    </div>
+  );
+}
+
+function Step({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-background p-3">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary">{num}</span>
+        <span className="text-sm font-medium">{title}</span>
+      </div>
+      <div className="text-xs text-muted-foreground leading-relaxed">{children}</div>
     </div>
   );
 }
