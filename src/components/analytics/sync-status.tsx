@@ -5,7 +5,6 @@ import { Smartphone, CheckCircle2, AlertCircle, Clock, Plus } from 'lucide-react
 import { addDailyActivity } from '@/lib/stores/analytics-store';
 import { toDateString } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { useUserId } from '@/hooks/use-user-id';
 
 interface SyncStatusProps {
   lastSyncDate?: string;
@@ -13,7 +12,6 @@ interface SyncStatusProps {
 }
 
 export function SyncStatus({ lastSyncDate, apiKey }: SyncStatusProps) {
-  const userId = useUserId();
   const [showManual, setShowManual] = useState(false);
   const [manualSteps, setManualSteps] = useState('');
   const [manualCalories, setManualCalories] = useState('');
@@ -24,10 +22,9 @@ export function SyncStatus({ lastSyncDate, apiKey }: SyncStatusProps) {
   );
 
   const handleManualSave = async () => {
-    if (!userId) return;
     setSaving(true);
     try {
-      await addDailyActivity(userId, {
+      await addDailyActivity({
         date: toDateString(),
         steps: parseInt(manualSteps) || 0,
         activeCalories: parseInt(manualCalories) || 0,

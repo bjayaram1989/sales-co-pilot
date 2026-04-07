@@ -7,7 +7,7 @@ interface MealCardProps {
   meal: MealType;
   entries: FoodLogEntry[];
   onAddFood: () => void;
-  onDeleteEntry: (id: number) => void;
+  onDeleteEntry: (id: string) => void;
 }
 
 const mealIcons: Record<MealType, string> = {

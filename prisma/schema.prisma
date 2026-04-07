@@ -18,6 +18,14 @@ model User {
   updatedAt      DateTime  @updatedAt
   accounts       Account[]
   sessions       Session[]
+
+  fitnessProfile       FitnessProfile?
+  workoutSessions      WorkoutSession[]
+  personalRecords      PersonalRecord[]
+  foodLogEntries       FoodLogEntry[]
+  nutritionAdjustments NutritionAdjustment[]
+  weightEntries        WeightEntry[]
+  dailyActivities      DailyActivity[]
 }
 
 model Account {
@@ -53,4 +61,128 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ==================== Fitness Data Models ====================
+
+model FitnessProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  name            String
+  age             Int
+  gender          String
+  heightCm        Float
+  currentWeightLbs Float
+  targetWeightLbs  Float
+  activityLevel   String
+  goal            String
+  experienceLevel String
+  preferredSplit  String
+  healthSyncApiKey String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WorkoutSession {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionId   String   @unique
+  date        String
+  name        String
+  splitDay    String
+  exercises   String   // JSON string
+  duration    Int?
+  completed   Boolean  @default(false)
+  weekNumber  Int      @default(1)
+  isDeload    Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model PersonalRecord {
+  id           String   @id @default(cuid())
+  userId       String
+  exerciseId   String
+  exerciseName String
+  weight       Float
+  reps         Int
+  date         String
+  sessionId    String
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, exerciseId])
+}
+
+model FoodLogEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  date        String
+  foodItemId  String
+  foodName    String
+  servings    Float
+  servingSizeG Float
+  meal        String
+  calories    Float
+  protein     Float
+  carbs       Float
+  fat         Float
+  fiber       Float?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model NutritionAdjustment {
+  id                String   @id @default(cuid())
+  userId            String
+  date              String
+  previousCalories  Float
+  newCalories       Float
+  reason            String
+  weeklyWeightChange Float
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model WeightEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  date           String
+  weightLbs      Float
+  bodyFatPercent Float?
+  note           String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model DailyActivity {
+  id              String   @id @default(cuid())
+  userId          String
+  date            String
+  steps           Int
+  activeCalories  Int
+  restingHeartRate Int?
+  source          String   @default("manual")
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
 }

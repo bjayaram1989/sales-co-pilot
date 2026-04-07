@@ -1,53 +1,68 @@
-import { getDb } from '@/lib/db';
 import type { FoodLogEntry, NutritionAdjustment, WeightEntry } from '@/types';
 
 // Food Log
-export async function getFoodLogByDate(userId: string, date: string): Promise<FoodLogEntry[]> {
-  return getDb(userId).foodLogEntries.where('date').equals(date).toArray();
+export async function getFoodLogByDate(date: string): Promise<FoodLogEntry[]> {
+  const res = await fetch(`/api/fitness/food-log?date=${date}`);
+  if (!res.ok) return [];
+  return res.json();
 }
 
-export async function addFoodLogEntry(userId: string, entry: Omit<FoodLogEntry, 'id'>): Promise<number> {
-  return getDb(userId).foodLogEntries.add(entry as FoodLogEntry) as Promise<number>;
+export async function addFoodLogEntry(entry: Omit<FoodLogEntry, 'id'>): Promise<void> {
+  await fetch('/api/fitness/food-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  });
 }
 
-export async function updateFoodLogEntry(userId: string, id: number, entry: Partial<FoodLogEntry>): Promise<void> {
-  await getDb(userId).foodLogEntries.update(id, entry);
+export async function updateFoodLogEntry(id: string, entry: Partial<FoodLogEntry>): Promise<void> {
+  await fetch('/api/fitness/food-log', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...entry }),
+  });
 }
 
-export async function deleteFoodLogEntry(userId: string, id: number): Promise<void> {
-  await getDb(userId).foodLogEntries.delete(id);
+export async function deleteFoodLogEntry(id: string): Promise<void> {
+  await fetch(`/api/fitness/food-log?id=${id}`, { method: 'DELETE' });
 }
 
-export async function getFoodLogByDateRange(userId: string, startDate: string, endDate: string): Promise<FoodLogEntry[]> {
-  return getDb(userId).foodLogEntries
-    .where('date')
-    .between(startDate, endDate, true, true)
-    .toArray();
+export async function getFoodLogByDateRange(startDate: string, endDate: string): Promise<FoodLogEntry[]> {
+  const res = await fetch(`/api/fitness/food-log?startDate=${startDate}&endDate=${endDate}`);
+  if (!res.ok) return [];
+  return res.json();
 }
 
 // Weight Entries
-export async function getWeightEntries(userId: string, limit = 90): Promise<WeightEntry[]> {
-  return getDb(userId).weightEntries.orderBy('date').reverse().limit(limit).toArray();
+export async function getWeightEntries(limit = 90): Promise<WeightEntry[]> {
+  const res = await fetch(`/api/fitness/weight?limit=${limit}`);
+  if (!res.ok) return [];
+  return res.json();
 }
 
-export async function addWeightEntry(userId: string, entry: Omit<WeightEntry, 'id'>): Promise<number> {
-  const existing = await getDb(userId).weightEntries.where('date').equals(entry.date).first();
-  if (existing?.id != null) {
-    await getDb(userId).weightEntries.update(existing.id, entry);
-    return existing.id;
-  }
-  return getDb(userId).weightEntries.add(entry as WeightEntry) as Promise<number>;
+export async function addWeightEntry(entry: Omit<WeightEntry, 'id'>): Promise<void> {
+  await fetch('/api/fitness/weight', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  });
 }
 
-export async function deleteWeightEntry(userId: string, id: number): Promise<void> {
-  await getDb(userId).weightEntries.delete(id);
+export async function deleteWeightEntry(id: string): Promise<void> {
+  await fetch(`/api/fitness/weight?id=${id}`, { method: 'DELETE' });
 }
 
 // Nutrition Adjustments
-export async function getNutritionAdjustments(userId: string): Promise<NutritionAdjustment[]> {
-  return getDb(userId).nutritionAdjustments.orderBy('date').reverse().toArray();
+export async function getNutritionAdjustments(): Promise<NutritionAdjustment[]> {
+  const res = await fetch('/api/fitness/nutrition-adjustments');
+  if (!res.ok) return [];
+  return res.json();
 }
 
-export async function saveNutritionAdjustment(userId: string, adjustment: Omit<NutritionAdjustment, 'id'>): Promise<number> {
-  return getDb(userId).nutritionAdjustments.add(adjustment as NutritionAdjustment) as Promise<number>;
+export async function saveNutritionAdjustment(adjustment: Omit<NutritionAdjustment, 'id'>): Promise<void> {
+  await fetch('/api/fitness/nutrition-adjustments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(adjustment),
+  });
 }

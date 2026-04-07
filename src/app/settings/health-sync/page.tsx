@@ -6,7 +6,6 @@ import { Smartphone, Copy, Check, RefreshCw, ArrowRight } from 'lucide-react';
 import { getUserProfile, saveUserProfile } from '@/lib/stores/user-store';
 import { generateId } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { useUserId } from '@/hooks/use-user-id';
 
 const setupSteps = [
   {
@@ -42,29 +41,25 @@ const setupSteps = [
 ];
 
 export default function HealthSyncPage() {
-  const userId = useUserId();
   const [apiKey, setApiKey] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [appUrl, setAppUrl] = useState('');
 
   useEffect(() => {
     setAppUrl(window.location.origin);
-    if (userId) {
-      getUserProfile(userId).then((profile) => {
-        if (profile?.healthSyncApiKey) {
-          setApiKey(profile.healthSyncApiKey);
-        }
-      });
-    }
-  }, [userId]);
+    getUserProfile().then((profile) => {
+      if (profile?.healthSyncApiKey) {
+        setApiKey(profile.healthSyncApiKey);
+      }
+    });
+  }, []);
 
   const generateApiKey = async () => {
-    if (!userId) return;
     const key = `ftk_${generateId().replace(/-/g, '')}`;
     setApiKey(key);
-    const profile = await getUserProfile(userId);
+    const profile = await getUserProfile();
     if (profile) {
-      await saveUserProfile(userId, { ...profile, healthSyncApiKey: key });
+      await saveUserProfile({ ...profile, healthSyncApiKey: key });
     }
   };
 

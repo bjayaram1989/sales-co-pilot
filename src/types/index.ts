@@ -1,6 +1,6 @@
 // ==================== User Profile ====================
 export interface UserProfile {
-  id?: number;
+  id?: string;
   name: string;
   age: number;
   gender: 'male' | 'female';
@@ -60,7 +60,7 @@ export interface WorkoutExercise {
 }
 
 export interface WorkoutSession {
-  id?: number;
+  id?: string;
   sessionId: string;
   date: string;
   name: string;
@@ -74,7 +74,7 @@ export interface WorkoutSession {
 }
 
 export interface PersonalRecord {
-  id?: number;
+  id?: string;
   exerciseId: string;
   exerciseName: string;
   weight: number;
@@ -101,7 +101,7 @@ export interface FoodItem {
 }
 
 export interface FoodLogEntry {
-  id?: number;
+  id?: string;
   date: string;
   foodItemId: string;
   foodName: string;
@@ -123,7 +123,7 @@ export interface MacroTargets {
 }
 
 export interface NutritionAdjustment {
-  id?: number;
+  id?: string;
   date: string;
   previousCalories: number;
   newCalories: number;
@@ -149,7 +149,7 @@ export interface Supplement {
 
 // ==================== Weight & Analytics ====================
 export interface WeightEntry {
-  id?: number;
+  id?: string;
   date: string;
   weightLbs: number;
   bodyFatPercent?: number;
@@ -157,7 +157,7 @@ export interface WeightEntry {
 }
 
 export interface DailyActivity {
-  id?: number;
+  id?: string;
   date: string;
   steps: number;
   activeCalories: number;

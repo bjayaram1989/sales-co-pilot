@@ -8,7 +8,6 @@ import { useTheme } from 'next-themes';
 import { getUserProfile, saveUserProfile } from '@/lib/stores/user-store';
 import type { UserProfile, ActivityLevel, Goal, ExperienceLevel, WorkoutSplit } from '@/types';
 import { cn } from '@/lib/utils';
-import { useUserId } from '@/hooks/use-user-id';
 
 const goalOptions: { value: Goal; label: string; desc: string }[] = [
   { value: 'fat_loss', label: 'Fat Loss', desc: 'Maximize fat loss, preserve muscle' },
@@ -40,7 +39,6 @@ const splitOptions: { value: WorkoutSplit; label: string; desc: string }[] = [
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const userId = useUserId();
   const [mounted, setMounted] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -59,32 +57,29 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true);
-    if (userId) {
-      getUserProfile(userId).then((profile) => {
-        if (profile) {
-          setForm({
-            name: profile.name,
-            age: profile.age,
-            gender: profile.gender,
-            heightCm: profile.heightCm,
-            currentWeightLbs: profile.currentWeightLbs,
-            targetWeightLbs: profile.targetWeightLbs,
-            activityLevel: profile.activityLevel,
-            goal: profile.goal,
-            experienceLevel: profile.experienceLevel,
-            preferredSplit: profile.preferredSplit,
-          });
-        }
-      });
-    }
-  }, [userId]);
+    getUserProfile().then((profile) => {
+      if (profile) {
+        setForm({
+          name: profile.name,
+          age: profile.age,
+          gender: profile.gender,
+          heightCm: profile.heightCm,
+          currentWeightLbs: profile.currentWeightLbs,
+          targetWeightLbs: profile.targetWeightLbs,
+          activityLevel: profile.activityLevel,
+          goal: profile.goal,
+          experienceLevel: profile.experienceLevel,
+          preferredSplit: profile.preferredSplit,
+        });
+      }
+    });
+  }, []);
 
   const handleSave = async () => {
-    if (!userId) return;
     setSaving(true);
     try {
-      const existing = await getUserProfile(userId);
-      await saveUserProfile(userId, { ...form, id: existing?.id });
+      const existing = await getUserProfile();
+      await saveUserProfile({ ...form, id: existing?.id });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
@@ -121,7 +116,7 @@ export default function SettingsPage() {
         {/* Save feedback note */}
         {saved && (
           <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
-            Profile saved to this device. Your data is stored locally in your browser, tied to your account.
+            Profile saved successfully. Your data is synced to the cloud and accessible from any device.
           </div>
         )}
 
@@ -339,7 +334,7 @@ export default function SettingsPage() {
         <section className="rounded-xl border border-border bg-card p-4">
           <h2 className="mb-2 text-base font-semibold">Data Storage</h2>
           <p className="text-sm text-muted-foreground">
-            Your fitness data (profile, workouts, nutrition, weight) is stored locally in your browser, tied to your account. Data persists across sessions on this device.
+            Your fitness data (profile, workouts, nutrition, weight) is stored securely in the cloud, tied to your account. Data persists across all your devices and browsers.
           </p>
         </section>
 
