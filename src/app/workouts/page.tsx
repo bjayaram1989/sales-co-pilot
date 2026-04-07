@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout/header';
 import { WorkoutCard } from '@/components/workouts/workout-card';
 import { EmptyState } from '@/components/shared/empty-state';
-import { Dumbbell, Plus, History, Sparkles, CalendarDays, Check } from 'lucide-react';
-import { getRecentWorkouts, saveWorkout } from '@/lib/stores/workout-store';
+import { Dumbbell, Plus, History, Sparkles, CalendarDays, Check, Trash2, RotateCcw } from 'lucide-react';
+import { getRecentWorkouts, saveWorkout, deleteWorkout } from '@/lib/stores/workout-store';
 import { getUserProfile } from '@/lib/stores/user-store';
 import { generateNextWorkout, generateWeekPlan } from '@/lib/algorithms/workout-generator';
 import type { WorkoutSession } from '@/types';
@@ -19,6 +19,8 @@ export default function WorkoutsPage() {
   const [generating, setGenerating] = useState(false);
   const [generatingWeek, setGeneratingWeek] = useState(false);
   const [weekGenerated, setWeekGenerated] = useState(false);
+  const [deletedWorkouts, setDeletedWorkouts] = useState<WorkoutSession[]>([]);
+  const [showDeleted, setShowDeleted] = useState(false);
 
   useEffect(() => {
     loadWorkouts();
@@ -74,6 +76,30 @@ export default function WorkoutsPage() {
       setGeneratingWeek(false);
     }
   };
+
+  const handleDeleteWorkout = useCallback(async (sessionId: string) => {
+    const workout = workouts.find((w) => w.sessionId === sessionId);
+    if (!workout) return;
+
+    // Optimistically remove from UI
+    setWorkouts((prev) => prev.filter((w) => w.sessionId !== sessionId));
+    setDeletedWorkouts((prev) => [...prev, workout]);
+
+    // Actually delete from server
+    await deleteWorkout(sessionId);
+  }, [workouts]);
+
+  const handleReinstateWorkout = useCallback(async (sessionId: string) => {
+    const workout = deletedWorkouts.find((w) => w.sessionId === sessionId);
+    if (!workout) return;
+
+    // Re-save to server
+    await saveWorkout(workout);
+
+    // Update state
+    setDeletedWorkouts((prev) => prev.filter((w) => w.sessionId !== sessionId));
+    setWorkouts((prev) => [...prev, workout].sort((a, b) => b.date.localeCompare(a.date)));
+  }, [deletedWorkouts]);
 
   // Find today's incomplete workout
   const today = new Date().toISOString().split('T')[0];
@@ -143,7 +169,7 @@ export default function WorkoutsPage() {
             <h2 className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               Today
             </h2>
-            <WorkoutCard session={todayWorkout} />
+            <WorkoutCard session={todayWorkout} onDelete={handleDeleteWorkout} />
           </section>
         )}
 
@@ -155,7 +181,7 @@ export default function WorkoutsPage() {
             </h2>
             <div className="space-y-3">
               {upcomingWorkouts.map((session) => (
-                <WorkoutCard key={session.sessionId} session={session} />
+                <WorkoutCard key={session.sessionId} session={session} onDelete={handleDeleteWorkout} />
               ))}
             </div>
           </section>
@@ -169,7 +195,7 @@ export default function WorkoutsPage() {
             </h2>
             <div className="space-y-3">
               {incompleteWorkouts.map((session) => (
-                <WorkoutCard key={session.sessionId} session={session} />
+                <WorkoutCard key={session.sessionId} session={session} onDelete={handleDeleteWorkout} />
               ))}
             </div>
           </section>
@@ -183,14 +209,55 @@ export default function WorkoutsPage() {
             </h2>
             <div className="space-y-3">
               {completedWorkouts.slice(0, 5).map((session) => (
-                <WorkoutCard key={session.sessionId} session={session} />
+                <WorkoutCard key={session.sessionId} session={session} onDelete={handleDeleteWorkout} />
               ))}
             </div>
           </section>
         )}
 
+        {/* Deleted Workouts (Reinstate) */}
+        {deletedWorkouts.length > 0 && (
+          <section>
+            <button
+              onClick={() => setShowDeleted(!showDeleted)}
+              className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-wide hover:text-foreground"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Deleted ({deletedWorkouts.length})
+              <span className="text-xs normal-case font-normal">
+                {showDeleted ? '(hide)' : '(show)'}
+              </span>
+            </button>
+            {showDeleted && (
+              <div className="space-y-3">
+                {deletedWorkouts.map((session) => (
+                  <div
+                    key={session.sessionId}
+                    className="flex items-center gap-3 rounded-xl border border-border border-dashed bg-card/50 p-4 opacity-60"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm line-through">{session.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {' · '}{session.exercises.length} exercises
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleReinstateWorkout(session.sessionId)}
+                      className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reinstate
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Empty State */}
-        {!loading && workouts.length === 0 && (
+        {!loading && workouts.length === 0 && deletedWorkouts.length === 0 && (
           <EmptyState
             icon={Dumbbell}
             title="No workouts yet"
